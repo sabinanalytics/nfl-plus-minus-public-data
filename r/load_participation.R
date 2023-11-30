@@ -514,7 +514,10 @@ cat("Recruiting Stan Model took: ",
     time_length(stan_end_time - stan_start_time, unit = "minutes"),
     " minutes \n")
 
-### WHY DOES THIS LOVE COMMANDERS PLAYERS?
+### Notes:
+#1. positional value priors should be stronger? why isn't QB No. 1?
+#2. aaron donald?
+#3. positions are weird: Kelce a WR and Puka a TE? should I switch sources?
 
 #player effects
 plyr_summary <- summary(nfl_player_stan_fit, pars = "b")$summary
@@ -534,6 +537,9 @@ sd_player_est <- rstan::extract(nfl_player_stan_fit, "sd_player")$sd_player %>% 
   summarize(est = median(value), var = var(value))
 sd_model_est <- rstan::extract(nfl_player_stan_fit, "sd_model")$sd_model %>% as_tibble() %>% 
   summarize(est = median(value), var = var(value))
+
+## hierarchical player effects
+summary(nfl_player_stan_fit, pars = "beta_player")$summary
 
 ##position effects
 phi_post <- rstan::extract(nfl_player_stan_fit, "phi")$phi
