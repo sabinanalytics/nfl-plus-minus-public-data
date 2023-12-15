@@ -676,8 +676,8 @@ neff_tbl <- effective_sample(nfl_player_stan_fit) |>
 
 ## player effects
 player_draws <- nfl_player_stan_fit %>%
-  spread_draws(b[player_index, season_index],
-               sep = "[,]")
+   spread_draws(b[player_index, season_index],
+                sep = "[,]")
 
 player_param_summary <- player_draws |> 
   group_by(player_index,
@@ -692,10 +692,12 @@ player_param_summary <- player_draws |>
 
 ## combine table of players with season estimates (this ignores positional value -- added with positional phi parameter)
 player_summary_play_type <- player_tbl_play_type |> 
-  left_join(player_param_summary, 
+  left_join(player_param_summary,
             by = c("player_index")) |> 
   filter(season >= start_season,
          season <= end_season)
+
+### KIRK COUSINS, DERRICK HENRY IN 2023 TWICE? ## Where is Taylor Heinicke?
 
 ## Game parameters (home field, intercept, and other game-level effects)
 success_rate_game_params <- nfl_player_stan_fit %>%
