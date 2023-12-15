@@ -9,7 +9,7 @@ aws.s3::bucket_list_df(paste0(bucket_name, "/football_data/"))
 
 data_filenames <- get_bucket_df(bucket_name) %>% 
   rename(filename = Key) %>% 
-  filter(str_detect(filename, "nfl_data/play_distrbutions/")) %>% 
+  filter(str_detect(filename, "nfl_data/play_distributions/")) %>% 
   mutate(filetype = str_extract(filename, "quantiles|summary"),
          season = str_extract(filename, "[[:digit:]]{4,}")) %>% 
   dplyr::select(-name) %>% 
