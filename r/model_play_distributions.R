@@ -1,5 +1,7 @@
 #model_play_distributions.R
 library(xgboost)
+library(MASS)
+library(Matrix)
 library(parallel)
 library(rstan)
 library(rstanarm)
@@ -11,6 +13,7 @@ library(tensorflow)
 library(plotly)
 library(aws.s3)
 bucket_name <- "s3://sagemaker-studio-m35e50pwfmm/"
+
 
 options(tibble.width = Inf)
 rstan_options(auto_write = TRUE)
@@ -833,13 +836,3 @@ model %>% evaluate(
     binary_output = test_turnover
   )
 )
-
-
-
-# Prepare your target variables as before...
-
-# Build and compile your model as before...
-
-
-
-

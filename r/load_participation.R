@@ -514,11 +514,6 @@ cat("Recruiting Stan Model took: ",
     time_length(stan_end_time - stan_start_time, unit = "minutes"),
     " minutes \n")
 
-### Notes:
-#1. positional value priors should be stronger? why isn't QB No. 1?
-#2. aaron donald?
-#3. positions are weird: Kelce a WR and Puka a TE? should I switch sources?
-
 #player effects
 plyr_summary <- summary(nfl_player_stan_fit, pars = "b")$summary
 plyr_effect <- player_tbl_play_type
