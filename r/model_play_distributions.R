@@ -9,6 +9,8 @@ library(drf)
 library(keras)
 library(tensorflow)
 library(plotly)
+library(aws.s3)
+bucket_name <- "s3://sagemaker-studio-m35e50pwfmm/"
 
 options(tibble.width = Inf)
 rstan_options(auto_write = TRUE)
@@ -650,7 +652,7 @@ for(test_data_i in 1:n_test_data){
     )
   
   #calculate the quantile of the actual play & sequence of quantiles for the play
-  quantiles_to_save <- c(0.01, seq(0.05, 0.95, by = 0.05), 0.99)
+  quantiles_to_save <- c(0.005, 0.01, seq(0.05, 0.95, by = 0.05), 0.99, 0.995)
   next_play_distribution <- next_play_distribution %>% 
     arrange(ep) %>% 
     mutate(cdf_val = cumsum(prob))
@@ -658,7 +660,7 @@ for(test_data_i in 1:n_test_data){
   ### CHECK:
   ## some missing play_quantile values (19238 out of 361098 from 2014-2023)
   # a lot of them are on touchdowns where next_yardline_100 = 0
-  #Example: season = 2014, game_id = 2014_01_BUF_CHI, play_id = 210
+  #Example: season = 2016, game_id = 2016_01_BUF_BAL, play_id = 3566
   
   
   # Use approx to interpolate
@@ -691,8 +693,25 @@ for(test_data_i in 1:n_test_data){
   
   #write out if last value of season
   if(test_data_i == n_test_data){
-    play_summary %>% write_rds(paste0('../data/play_summary_', test_season, '.rds'))
-    play_quantiles %>% write_rds(paste0('../data/play_quantiles_', test_season, '.rds'))
+    play_summary %>% 
+      s3write_using(FUN = write_rds,
+                    bucket = bucket_name,
+                    object = paste0("nfl_data/play_distributions/play_summary_", 
+                                    test_season, 
+                                    ".rds")
+                    )
+    play_quantiles %>% 
+      s3write_using(FUN = write_rds,
+                    bucket = bucket_name,
+                    object = paste0("nfl_data/play_distributions/play_quantiles_", 
+                                    test_season, 
+                                    ".rds")
+                    )
+    
+    
+    
+    
+    
   }
   
   cat("Finished play ", test_data_i, " of ", n_test_data, " in ", test_season, " season \r")
@@ -725,8 +744,7 @@ next_play_distribution %>%
              col = posteam,
              fill = posteam)
   ) + 
-  geom_col() +
-  ggtitle()
+  geom_col() 
 
 
 # Neural Network ----------------------------------------------------------
