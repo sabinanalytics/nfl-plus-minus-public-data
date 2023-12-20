@@ -2,7 +2,7 @@ data {
   int<lower=1> n_plays; //number of data points
   int<lower=0, upper=1> y_success[n_plays]; //response variable, y_success is a set of integers (1 if successful play, 0 otherwise)
   
-  real z_epa[n_plays]; //response variable, the z-score of the epa per play
+  real z[n_plays]; //response variable, the z-score of the epa per play
   
   int<lower=1> n_seasons;//number of seasons in the data
   
@@ -236,6 +236,6 @@ data {
     y_success ~ bernoulli_logit(mu_success);
 
   // Likelihood of observed data
-  z_epa ~ normal(mu_epa, sd_model); // do we want thicker tails like student_t(8)?
+  z ~ normal(mu_epa, sd_model); // do we want thicker tails like student_t(8)?
 
 }

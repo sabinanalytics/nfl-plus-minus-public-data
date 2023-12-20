@@ -25,6 +25,7 @@ library(tidybayes)
 library(bayestestR)
 library(aws.s3)
 library(splines)
+library(arrow)
 
 options(tibble.width = Inf)
 rstan_options(auto_write = TRUE)
@@ -32,6 +33,7 @@ options(mc.cores = parallel::detectCores())### run on all cores
 run_season <- 2016:2023
 min_season <- min(run_season)
 max_season <- max(run_season)
+bucket_name <- "s3://sagemaker-studio-m35e50pwfmm/"
 
 
 source("get_nfl_player_contract_by_season.R")
@@ -43,8 +45,36 @@ nfl_schedule <- nflreadr::load_schedules()
 nfl_player_stats <- load_player_stats(run_season)
 nfl_pbp <- load_pbp(run_season)
 
+#fix nfl rosters missing some draft_numbers
+nfl_rosters <- nfl_rosters |> 
+  group_by(gsis_id) |> 
+  fill(draft_number, .direction = "downup") |> 
+  ungroup()
 
 player_yearly_salary <- get_nfl_player_contract_by_season(nfl_contracts)
+
+### get play quantile from s3 written by "model_play_distributions.R"
+data_filenames <- get_bucket_df(bucket_name) %>% 
+  rename(filename = Key) %>% 
+  filter(str_detect(filename, "nfl_data/play_distributions/play_summary")) %>% 
+  mutate(season = str_extract(filename, "[[:digit:]]{4,}")) |> 
+  filter(!is.na(season))
+
+play_quantile_summary <- NULL
+### read in play data from distribution models
+for(i in 1:nrow(data_filenames)){
+  play_quantile_summary <- s3read_using(FUN = read_rds,
+                               bucket = bucket_name,
+                               object = data_filenames$filename[i]) %>% 
+    dplyr::select(season,
+                  game_id,
+                  play_id,
+                  epa,
+                  play_quantile) %>%
+    ##define standard normal result based on play quantiles
+    mutate(knorm = qnorm(play_quantile)) %>%
+    bind_rows(play_quantile_summary)
+}
 
 
 #offense players long version
@@ -201,9 +231,9 @@ player_tbl <- nfl_rosters %>%
           team) %>% 
   group_by(### this section allows the "team" to show multiple teams if switched team's at some point
            draft_number,
-           gsis_id,
-           college) %>% 
+           gsis_id) %>% 
   summarize(team = paste(unique(team), collapse = ","),
+            college = paste(unique(college), collapse = ","),
             entry_year = mean(entry_year, na.rm = TRUE) |> round(),
             min_years_exp = min(years_exp, na.rm = TRUE),
             max_years_exp = max(years_exp, na.rm = TRUE),
@@ -306,18 +336,39 @@ player_contract_season_tbl <- player_contract_season_tbl |>
 
 # break out into run and pass plays ---------------------------------------
 
-play_type <- 'pass'
+# play_type <- 'pass'
 
-if(play_type == 'pass'){
+for(play_type in c('pass', 'rush')){
   nfl_pbp_model_data <- nfl_pbp_simple %>% 
-    filter(qb_dropback == 1,
-           qb_kneel == 0,
+    filter(qb_kneel == 0,
            qb_spike == 0,
            extra_point_attempt == 0,
            field_goal_attempt == 0,
            kickoff_attempt == 0,
-           special_teams_play == 0) %>% 
+           special_teams_play == 0) 
+  
+  if(play_type == "pass"){
+    nfl_pbp_model_data <- nfl_pbp_model_data |> 
+      filter(qb_dropback == 1)
+  }else{
+    nfl_pbp_model_data <- nfl_pbp_model_data |> 
+      filter(qb_dropback == 0)
+  }
+  nfl_pbp_model_data <- nfl_pbp_model_data |> 
     dplyr::select(season:defteam_score)
+  
+  
+  
+  ## join on play quantile/knorm  (converted to std. normal kernal)
+  nfl_pbp_model_data <- nfl_pbp_model_data |> 
+    inner_join(play_quantile_summary |> 
+                 dplyr::select(season,
+                               game_id,
+                               play_id, 
+                               play_quantile,
+                               knorm),
+               by = c("game_id", "play_id", "season")
+    )
   
   participation_model <- nfl_pbp_model_data %>% 
     inner_join(all_participation %>% 
@@ -365,6 +416,8 @@ if(play_type == 'pass'){
              ep,
              wp,
              wpa,
+             play_quantile,
+             knorm,
              posteam_site_ind,
              defenders_in_box,
              number_of_pass_rushers,
@@ -378,6 +431,10 @@ if(play_type == 'pass'){
   # EPA and Success Vector
   play_epa <- play_data_model %>% pull(epa)
   play_success <- ifelse(play_epa > 0, 1, 0)
+  
+  # Normal Kernal of Play Quantiles
+  play_knorm <- play_data_model %>% pull(knorm)
+  play_quantile <- play_data_model |> pull(play_quantile)
   
   ### home/away/neutral each play
   play_home_ind <- play_data_model %>% pull(posteam_site_ind)
@@ -498,14 +555,40 @@ if(play_type == 'pass'){
   #   mutate(apy_cap_pct_vs_avg = contract_apy_cap_pct - weighted.mean(contract_apy_cap_pct, w = plays) ) |> 
   #   ungroup()
   
+  ## EPA response vectors
   mean_epa <- mean(play_epa)
   sd_epa <- sd(play_epa)
-  
   z_epa <- (play_epa - mean_epa) / sd_epa
-  
+  ## Success (1/0) Response vector
   mean_play_success <- mean(play_success)
   sd_play_success <- sd(play_success)
+  ## Normal Kernal of Play Quantile response vector
+  mean_knorm <- mean(play_knorm)
+  sd_knorm <- sd(play_knorm)
+  z_knorm <- (play_knorm - mean_knorm) / sd_knorm
+  ## Play Quantile response vectors
+  mean_quantile <- mean(play_quantile)
+  sd_quantile <- sd(play_quantile)
+  z_quantile <- (play_quantile - mean_quantile) / sd_quantile
   
+  ### Compare play densities plot
+  # compare_stat_dist_plot <- play_data_model |> 
+  #   distinct(game_id,
+  #          play_id,
+  #          epa,
+  #          knorm,
+  #          play_quantile) |> 
+  #   pivot_longer(cols = epa:play_quantile,
+  #                values_to = "play_response",
+  #                names_to = "stat") |> 
+  #   ggplot(aes(x = play_response, fill = stat)) +
+  #   geom_density(alpha = 0.5) + 
+  #   theme_bw() + 
+  #   xlab("") + ylab("Density") + 
+  #   xlim(-5,5) + 
+  #   ggtitle("Comparing Measures of Play Value") + 
+  #   scale_fill_discrete("Stat Type", labels = c("EPA", "Normal Kernel", "Quantile")) +
+  #   theme(legend.position = 'bottom')
   
   # y <- (play_epa - mean_epa)/sd_epa
   # y <- (play_success - mean_play_success) / sd_play_success
@@ -562,7 +645,9 @@ if(play_type == 'pass'){
                    home = as.integer(play_home_ind), 
                    
                    y_success = y_success, ### takes the centered at 0 epa for hopefully easier estimation
-                   z_epa = z_epa, ## the z-score of the epa per play
+                   # z = z_epa, ## the z-score of the epa per play
+                   z = z_knorm, ## the z-score of the epa per play
+
                    n_plays = n_plays,
                    n_players = n_players,
                    n_player_seasons = n_player_seasons,#number of players * tot # of seasons looked at
@@ -616,7 +701,7 @@ if(play_type == 'pass'){
                    uX = sparse_parts$u #row indicators of sparse matrix
   )
   
-}
+
 
 stan_start_time <- Sys.time()
 nfl_player_stan_fit <- stan(file = "../stan/all_year_player_model.stan", data = stan_dat,
@@ -662,7 +747,11 @@ cat("Recruiting Stan Model took: ",
     " minutes \n")
 
 #temporarly save stan model
-nfl_player_stan_fit |> write_rds("nfl_player_stan_fit.rds")
+stan_fit_file_name <- paste0("nfl_player_stan_fit_", play_type)
+nfl_player_stan_fit |> write_rds(paste0(stan_fit_file_name, ".rds"))
+
+
+
 ### Notes:
 #1. positional value priors should be stronger? why isn't QB No. 1?
 #2. aaron donald?
@@ -677,135 +766,95 @@ neff_tbl <- effective_sample(nfl_player_stan_fit) |>
 ## player effects
 player_draws <- nfl_player_stan_fit %>%
    spread_draws(b[player_index, season_index],
-                sep = "[,]")
+                sep = "[,]") |> 
+  ungroup()
 
-player_param_summary <- player_draws |> 
-  group_by(player_index,
-           season_index) |> 
-  summarize(post_mean = mean(b),
-            post_sd = sd(b),
-            prob_pos = mean(b > 0),
-            prob_neg = 1 - prob_pos
-            ) |>
-  ungroup() |> 
-  mutate(season = season_index - 1 + min_season)
 
-## combine table of players with season estimates (this ignores positional value -- added with positional phi parameter)
-player_summary_play_type <- player_tbl_play_type |> 
-  left_join(player_param_summary,
-            by = c("player_index")) |> 
-  filter(season >= start_season,
-         season <= end_season)
-
-### KIRK COUSINS, DERRICK HENRY IN 2023 TWICE? ## Where is Taylor Heinicke?
 
 ## Game parameters (home field, intercept, and other game-level effects)
-success_rate_game_params <- nfl_player_stan_fit %>%
+game_effects_sr_draws <- nfl_player_stan_fit %>%
   spread_draws(game_params_success[param_ind],
                sep = "[,]") |> 
-  group_by(param_ind) |> 
-  summarize(post_mean = mean(game_params_success),
-            post_sd = sd(game_params_success),
-            prob_pos = mean(game_params_success > 0),
-            prob_neg = 1 - prob_pos
-            ) |> 
-  cbind(tibble(param = c("intercept",
-                         "home",
-                         "grass",
-                         "outdoors",
-                         "temp",
-                         "wind")
-               )
-        )
-epa_game_params <- nfl_player_stan_fit %>%
+  ungroup()
+
+
+game_effects_pts_draws <- nfl_player_stan_fit %>%
   spread_draws(game_params_epa[param_ind],
                sep = "[,]") |> 
-  group_by(param_ind) |> 
-  summarize(post_mean = mean(game_params_epa),
-            post_sd = sd(game_params_epa),
-            prob_pos = mean(game_params_epa > 0),
-            prob_neg = 1 - prob_pos
-  ) |> 
-  cbind(tibble(param = c("home",
-                         "grass",
-                         "outdoors",
-                         "temp",
-                         "wind")
-               )
-        )
+  ungroup()
 
 
-## player prior means
-player_prior_draws <- nfl_player_stan_fit %>%
-  spread_draws(player_prior_mean_model[b_long_index],
-               sep = "[,]")
+# 
+# ## player prior means -- DIDN'T SAVE THIS OFF
+# player_prior_draws <- nfl_player_stan_fit %>%
+#   spread_draws(player_prior_mean_model[b_long_index],
+#                sep = "[,]")
 ## player prior parameters (including the draft) (beta_player, beta_player_draft)
 player_prior_coef_draws <- nfl_player_stan_fit %>%
   spread_draws(beta_player[coef_num],
                sep = "[,]")
 player_prior_draft_basis_coef_draws <- nfl_player_stan_fit %>%
-  spread_draws(player_draft_basis[basis_col_num],
+  spread_draws(beta_player_draft[basis_col_num],
                sep = "[,]")
 
-player_prior_coef_summary <- player_prior_draft_basis_coef_draws |> 
-  group_by(basis_col_num) |> 
-  summarize(post_mean = mean(player_draft_basis),
-            post_sd = sd(player_draft_basis),
-            prob_pos = mean(player_draft_basis > 0),
-            prob_neg = 1 - prob_pos
-  ) |>
-  mutate(param = "player_draft_basis") |> 
-  rename(coef_num = basis_col_num) |> 
-  bind_rows(
-    player_prior_coef_draws |> 
-      group_by(coef_num) |> 
-      summarize(post_mean = mean(beta_player),
-                post_sd = sd(beta_player),
-                prob_pos = mean(beta_player > 0),
-                prob_neg = 1 - prob_pos
-      ) |> 
-      mutate(param = "beta_player")
-  )
 ## variances (sd_model, sd_player_yoy, sd_player_first, sd_player_rookie)
+std_dev_draws <- nfl_player_stan_fit |> 
+  spread_draws(`sd_.*`,
+               regex = TRUE)
 
-
-## positional value (phi)
 
 ## soft constraints (sum_weighted_phi, sum_weighed_player_effect)
-game_params_success
-game_params_epa
+soft_constraint_draws <- nfl_player_stan_fit |> 
+  spread_draws(`sum_weighted_.*`,
+               regex = TRUE)
+
+## positional value (phi)
+unique_positions <- c("QB", "RB", "FB", "SLOT_WR", "WR", "TE", "T", "G", "C", 
+                      "EDGE", "INTERIOR_LINE", "MLB", "SLOT_CB", "CB", "SAFETY")
+
+phi_post_draws <- nfl_player_stan_fit %>%
+  spread_draws(phi[coef_num],
+               sep = "[,]") |> 
+  ungroup()
+
+phi_post_draws <- phi_post_draws %>% 
+  left_join(
+            tibble(coef_num = 1:length(unique_positions),
+                   unique_positions),
+            by = "coef_num"
+            )
 
 
-##position effects
-phi_post <- rstan::extract(nfl_player_stan_fit, "phi")$phi
-phi_post_tbl <- phi_post %>% 
-  as.data.frame %>% as_tibble
-colnames(phi_post_tbl) <- c("QB", "RB", "FB", "SLOT_WR", "WR", "TE", "T", "G", "C", 
-                            "EDGE", "INTERIOR_LINE", "MLB", "SLOT_CB", "CB", "SAFETY")
-phi_post_tbl <- phi_post_tbl %>% 
-  pivot_longer(cols = everything(), 
-               names_to = "position", 
-               values_to = "poseterior_draw")
-
-phi_post_tbl_med <- phi_post_tbl %>% 
-  group_by(position) %>% 
-  summarize(effect = median(poseterior_draw), 
-            var = var(poseterior_draw)) %>% 
-  rename(sub_param = position) %>% 
-  mutate(param = 'position') %>% 
-  arrange(effect)
 
 
 ## save to aws
-bucket_exists(bucket = "s3://sagemaker-studio-m35e50pwfmm",
-              region = "us-east-1")
+# bucket_exists(bucket = bucket_name,
+#               region = "us-east-1")
+file_path <- "nfl_data/adjusted-plus-minus-model/model_files/"
 
-# 
-# plyr_effect |> 
-#   group_by(team) |> 
-#   summarize(avg_team = weighted.mean(player_effect, w = plays), 
-#             players = n(), 
-#             plays = sum(plays)) |> 
-#   filter(!is.na(avg_team)) |> 
-#   arrange(desc(avg_team)) |> 
-#   filter(players > 10)
+#write draws of parameters to s3
+object_name_all <- c("neff_tbl",
+                     "player_tbl_play_type",
+                     "player_draws",
+                     "player_prior_coef_draws",
+                     "player_prior_draft_basis_coef_draws",
+                     "phi_post_draws",
+                     "game_effects_sr_draws",
+                     "game_effects_pts_draws",
+                     "std_dev_draws",
+                     "soft_constraint_draws")
+for(object_name in object_name_all){
+  object_name_write <- paste0(object_name, "_", play_type, ".parquet")
+  aws.s3::s3write_using(x = get(object_name),
+                        FUN = arrow::write_parquet,
+                        bucket = bucket_name,
+                        object = paste0(file_path, object_name_write)
+  )
+}
+
+#remove stan file and other outputs of model to clear space
+rm(nfl_player_stan_fit)
+rm(list = object_name_all)
+gc()
+
+}
