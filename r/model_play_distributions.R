@@ -657,7 +657,7 @@ for(test_data_i in 1:n_test_data){
   #calculate the quantile of the actual play & sequence of quantiles for the play
   quantiles_to_save <- c(0.005, 0.01, seq(0.05, 0.95, by = 0.05), 0.99, 0.995)
   next_play_distribution <- next_play_distribution %>% 
-    arrange(ep) %>% 
+    arrange(epa) %>% 
     mutate(cdf_val = cumsum(prob))
   
   ### CHECK:
@@ -678,11 +678,11 @@ for(test_data_i in 1:n_test_data){
            play_id = predict_play_dist$play_id)
   
   #function saved to calculate quantile for this play
-  impute_epa_quantil_fun <- approxfun(y = next_play_distribution$cdf_val,
+  impute_epa_quantile_fun <- approxfun(y = next_play_distribution$cdf_val,
                                       x = next_play_distribution$epa)
   
   ## combine output play outcome distributions & save
-  predict_play_dist$play_quantile <- impute_epa_quantil_fun(predict_play_dist$epa)
+  predict_play_dist$play_quantile <- impute_epa_quantile_fun(predict_play_dist$epa)
   
   #if this value is missing its because it's either above 0.99 or below 0.01 then replace with those values
   if(is.na(predict_play_dist$play_quantile)){

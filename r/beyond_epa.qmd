@@ -1,0 +1,699 @@
+---
+title: "Beyond EPA"
+author: "Paul Sabin"
+format: html
+execute:
+  warning: false
+  message: false
+  error: false
+  echo: true
+  eval: true
+editor: visual
+# server: shiny
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(nflfastR)
+library(ggridges)
+library(xgboost)
+library(plotly)
+options(tibble.width = Inf)
+
+total_seasons <- 13
+cross_validate <- FALSE#if true, run through and cross validate, if not fit model on all seasons
+nfl_schedule <- nflreadr::load_schedules()
+max_season <- max(nfl_schedule$season)
+all_seasons <- (max_season - total_seasons + 1):max_season
+
+nfl_pbp <- load_pbp(all_seasons)
+# player_yearly_salary <- get_nfl_player_contract_by_season(nfl_contracts)
+
+## fix known bad "end_yardline" value
+nfl_pbp <- nfl_pbp %>% 
+  mutate(end_yard_line = replace(end_yard_line, end_yard_line == "GB -126", "GB 18"))
+
+nfl_pbp <- nfl_pbp %>% 
+  group_by(game_id, 
+           game_half) %>% 
+  mutate(temp_next_yardline_100 = lead(yardline_100)) %>% 
+  ungroup() %>% 
+  mutate(end_side_of_field = str_extract(end_yard_line, "[[:alpha:]]+"),
+         end_yrdline = str_extract(end_yard_line, "[[:digit:]]{1,3}") %>% as.numeric(),
+
+         next_yardline_100 = case_when((fumble_lost == 1 | interception == 1) & end_yrdline == 50 ~ 50,
+                                       (fumble_lost == 1 | interception == 1) & (posteam == end_side_of_field) ~ 
+                                       end_yrdline,
+                                       (fumble_lost == 1 | interception == 1) & (is.na(end_yard_line)) ~ temp_next_yardline_100,
+                                       (fumble_lost == 1 | interception == 1) & (defteam == end_side_of_field) ~ 
+                                         100 - end_yrdline,
+                                     TRUE ~ yardline_100 - yards_gained
+                                     ),
+         ## account for interception or fumble return touchdowns
+         next_yardline_100 = ifelse( (fumble_lost == 1 | interception == 1) & return_touchdown == 1, 0, next_yardline_100),
+         ## account for touchbacks
+         next_yardline_100 = ifelse(next_yardline_100 == 100 & !is.na(temp_next_yardline_100), temp_next_yardline_100, next_yardline_100),
+         
+         )
+
+### show relationship between next play yardline_100 and current for fumbles/interceptions
+# nfl_pbp %>% 
+#   filter(fumble_lost == 1 | interception == 1, kickoff_attempt == 0) %>% 
+#   filter(!is.na(yards_gained)) %>% 
+#   ggplot(aes(x = yardline_100, y = next_yardline_100) ) + geom_point() + geom_smooth() + theme_bw()
+
+
+nfl_pbp_simple <- nfl_pbp %>% 
+  mutate(half = ceiling(qtr / 2),
+         loc = case_when(tolower(location) == "neutral" ~ "n",
+                         posteam == home_team ~ 'h',
+                         posteam == away_team ~ 'a',
+                         TRUE ~ NA_character_),
+         turnover = if_else(fumble_lost == 1 | interception == 1, 1, 0),
+         current_tot_score = posteam_score + defteam_score
+         ) %>% 
+  dplyr::select(season,
+                game_id,
+                play_id,
+                series,
+                series_success,
+                posteam,
+                defteam,
+                home_team,
+                # away_team,
+                play_type,
+                special_teams_play,
+                passer,
+                passer_id,
+                qb_kneel,
+                qb_spike,
+                penalty,
+                turnover,
+                fumble_lost,
+                interception,
+                pass_attempt,
+                rush_attempt,
+                roof,
+                surface,
+                temp,
+                wind,
+                yards_gained,
+                current_tot_score,
+                current_score_diff = score_differential,
+                epa,
+                ep,
+                wpa,
+                wp,
+                vegas_wp,
+                loc,
+                # location,
+                qb_dropback,
+                half_seconds_remaining,
+                half,
+                qtr,
+                yardline_100,
+                next_yardline_100,
+                down,
+                ydstogo,
+                play_clock,
+                posteam_timeouts_remaining,
+                defteam_timeouts_remaining
+                )
+
+```
+
+
+# Background of EPA
+
+Expected Points Added (EPA) has emerged from an obscure stat from quants to the mainstream, occasionally making television broadcasts and as evidence for and against TV personality's talking points analyzing football performance. *Background lit review on history of EPA models from Carter & Machol, to Burke, to Baldwin, to Brill.*
+
+One advantage to using EPA as opposed to yards in football analysis is that it accounts for contextual information about the play that impacts the value of yards. For example 7 yards on 3rd and 5 is more valuable than on 3rd and 10 because the former results in a first down while the latter does not.
+
+In team analysis, EPA allows division of credit among different units of a football team. If the offense throws a turnover in its own territory and the defense subsequently allows a field goal, EPA can tell us that the defense likely was a positive on the net scoring margin while the offense was negative in that sequence despite the three points allowed typically being assigned to the defense.
+
+Similarly, if a punter is able to flip the field, the special teams unit will get credit for making the opposing offense have to go further to score.
+
+## Player Credit
+
+EPA is used often to compare player performances. In fact total EPA gained on the season for quarterbacks mirrors closely the results of the MVP voting (*source).* In recent years, several attempts have been made to assign credit to players based on how that player's teams unit performs in terms of EPA (*Sabin Plus-Minus, Eager WAR, Yurko nflWAR, Baldwin EPA+CPOE composite, Kevin Cole WAR)*.
+
+Barring extreme situations where a player intentionally gives himself up instead of scoring at the end of the game to preserve possession and ensure victory, the goal of each player on a football team on each play is to advance the ball as far as possible towards the end-zone as possible (*for the offense)* and likewise to prevent that from happening for the defense.
+
+This begs the question, do we use EPA as the preferred metric because it's the best metric to encapsulate individual and team performance on a play, or do we use it simply because it isn't *yards*?
+
+# Flaws of EPA
+
+This paper will examine three main flaws that EPA has. 
+
+1. The large jump in EPA at the 1st down line vs 1 yard short of the first down line while the difference in player and team performance can largely be attributed to chance.
+2. EPA does not follow a symmetric unimodal distribution, and depending on the situation it can skew left, skew right, be bimodal, unimodal, and more! This means that EPA per play for a team, unit, or player is affected largely by situation before the results of the play occur.
+3. Selection Bias. Until recently all EPA models were built off observed plays. Better teams have more plays in the opposing territory, biasing the expectation towards better teams in those situations. Brill & Wyner 2024 use catalytic priors in an effort to adjust expected points models for this selection bias.
+
+## Yards vs EPA
+
+No one with a knowledge of football can argue that 10 yards on 3rd and 10 and 10 yards on 3rd and 20 are worth the same to the offensive team. EPA accounts for this problem.
+
+Let's consider the hypothetical situation, it is 3rd and 10 at exactly midfield in the 1st quarter of a 0-0 game.
+
+Result A: The team gains 9 yards.
+
+Result B: The team gains 10 yards.
+
+```{r include=FALSE}
+# nflfastR::calculate_expected_points()
+#inputs for nflfastR model: fastrmodels::ep_model$feature_names
+
+#Row 1 is the first play situation, row 2 is Result A, row 3 is Result B.
+
+input_epa <- tibble(
+  posteam = rep("ARI", 3),
+  home_team = rep("ARI", 3),
+  roof = rep("dome", 3),
+  half_seconds_remaining = c(25 * 60, rep(25*60, 2) - 10),
+  yardline_100 = c(50, 41, 40),
+  ydstogo = c(10, 1, 10),
+  season = rep(2023, 3),
+  down = c(3, 4, 1),
+  posteam_timeouts_remaining = rep(3, 3),
+  defteam_timeouts_remaining = rep(3, 3)
+) %>% 
+  nflfastR::calculate_expected_points()
+
+```
+
+Now in terms of EPA, according to the NFLFastR model the Expected Points before the play is `r round(input_epa$ep[1], 2)` while the EPA for Result A is `r round(input_epa$ep[2] - input_epa$ep[1], 2)` compared to result B of `r round(input_epa$ep[3] - input_epa$ep[1], 2)`.
+
+While in yards the team gained 10% more in situation B than A, in EPA one play is drastically different than the other. That is a massive difference for players with essentially a coin flip difference in result (*reference to Spatial proximity in causal inference*).
+
+## Changing Distributional Shape of EPA Outcomes
+
+Let's look at the distribution of EPA for a pretty neutral situation at midfield for each down and play type (run & pass). 
+
+```{r}
+
+pbp_midfield <- nfl_pbp_simple %>% 
+  filter(yardline_100 == 50,
+         (down <= 3 & play_type %in% c("pass", "run")) | 
+           down == 4 & play_type == "pass", 
+         ydstogo == 10
+         ) 
+
+pbp_midfield_summary <- pbp_midfield %>% 
+  group_by(down,
+           play_type) %>% 
+  summarize(mean_epa = mean(epa),
+            median_epa = median(epa),
+            plays = n()
+            ) %>% 
+  ungroup()
+
+pbp_midfield_summary_long <- pbp_midfield_summary %>% 
+  pivot_longer(cols = ends_with("epa"),
+               names_to = "stat",
+               values_to = "epa") %>% 
+  mutate(stat = str_remove(stat, "_epa"))
+
+pbp_midfield %>% 
+  ggplot(aes(x = epa, 
+             fill = play_type, 
+             group = play_type)
+         ) + 
+  geom_density(alpha = 0.5 ) + 
+  geom_vline(data = pbp_midfield_summary_long,
+             aes(xintercept = epa,
+                 linetype = stat,
+                 color = play_type
+                 ),
+             alpha = 0.5, 
+             linewidth = 1.5
+             ) + 
+  xlim(-5, 5) +
+  ylab("") + 
+  xlab("EPA") +
+  theme_bw() + 
+  theme(legend.position = 'bottom',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()
+        ) + 
+  scale_fill_discrete("Play Type") + 
+  scale_color_discrete("") +
+  scale_linetype_discrete("") + 
+  facet_wrap(~down, ncol = 1) +
+  ggtitle("EPA by Down at Midfield with 10 Yards to Go", 
+          subtitle = paste0("NFL Plays ", min(nfl_pbp_simple$season), "-", max(nfl_pbp_simple$season), ", Data: NFLfastR" ) 
+          )
+```
+
+
+For each down there is a bimodal distribution of outcomes which gets larger variance and more skewness for each additional down. This matters because the means are pulled away from the center of the distribution towards the side of the skew. Players and teams that are in this situation will get credit or blame for in terms of EPA for simply performing at the median or 50th percentile. For example a 50th percentile performance for a run on 3rd down and 10 at the 50 is worth `r pbp_midfield_summary_long %>% filter(down == 3, play_type == "run", stat == "median") %>% pull(epa) %>% round(digits = 2)` EPA despite it being simply the median outcome!
+
+We can look at the most common starting field position of the 25 yard line (usually after a kickoff) as well. 
+
+
+```{r}
+
+pbp_25 <- nfl_pbp_simple %>% 
+  filter(yardline_100 == 25,
+         (down <= 3 & play_type %in% c("pass", "run")) | 
+           down == 4 & play_type == "pass", 
+         ydstogo == 10
+         ) 
+
+pbp_25_summary <- pbp_25 %>% 
+  group_by(down,
+           play_type) %>% 
+  summarize(mean_epa = mean(epa),
+            median_epa = median(epa),
+            plays = n()
+            ) %>% 
+  ungroup()
+
+pbp_25_summary_long <- pbp_25_summary %>% 
+  pivot_longer(cols = ends_with("epa"),
+               names_to = "stat",
+               values_to = "epa") %>% 
+  mutate(stat = str_remove(stat, "_epa"))
+
+pbp_25 %>% 
+  ggplot(aes(x = epa, 
+             fill = play_type, 
+             group = play_type)
+         ) + 
+  geom_density(alpha = 0.5 ) + 
+  geom_vline(data = pbp_25_summary_long,
+             aes(xintercept = epa,
+                 linetype = stat,
+                 color = play_type
+                 ),
+             alpha = 0.5, 
+             linewidth = 1.5
+             ) + 
+  xlim(-5, 5) +
+  ylab("") + 
+  xlab("EPA") +
+  theme_bw() + 
+  theme(legend.position = 'bottom',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()
+        ) + 
+  scale_fill_discrete("Play Type") + 
+  scale_color_discrete("") +
+  scale_linetype_discrete("") + 
+  facet_wrap(~down, ncol = 1) +
+  ggtitle("EPA by Down at Own 25 with 10 Yards to Go", 
+          subtitle = paste0("NFL Plays ", min(nfl_pbp_simple$season), "-", max(nfl_pbp_simple$season), ", Data: NFLfastR" ) 
+          )
+```
+
+
+We can look at an even more extreme example of this, for plays inside the 5 yard line in "goal to go" situations. 
+
+
+```{r}
+
+pbp_goaltogo <- nfl_pbp_simple %>% 
+  filter(yardline_100 <= 5,
+         (down <= 3 & play_type %in% c("pass", "run")) | 
+           down == 4 & play_type == "pass", 
+         ydstogo <= yardline_100
+         ) 
+
+pbp_goaltogo_summary <- pbp_goaltogo %>% 
+  group_by(down,
+           play_type) %>% 
+  summarize(mean_epa = mean(epa),
+            median_epa = median(epa),
+            plays = n()
+            ) %>% 
+  ungroup()
+pbp_goaltogo_summary_long <- pbp_goaltogo_summary %>% 
+  pivot_longer(cols = ends_with("epa"),
+               names_to = "stat",
+               values_to = "epa") %>% 
+  mutate(stat = str_remove(stat, "_epa"))
+
+pbp_goaltogo %>% 
+  ggplot(aes(x = epa, 
+             fill = play_type, 
+             group = play_type)
+         ) + 
+  geom_density(alpha = 0.5 ) + 
+  geom_vline(data = pbp_goaltogo_summary_long,
+             aes(xintercept = epa,
+                 linetype = stat,
+                 color = play_type
+                 ),
+             alpha = 0.5, 
+             linewidth = 1.5
+             ) + 
+  xlim(-7, 5) +
+  ylab("") + 
+  xlab("EPA") +
+  theme_bw() + 
+  theme(legend.position = 'bottom',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()
+        ) + 
+  scale_fill_discrete("Play Type") + 
+  scale_color_discrete("") +
+  scale_linetype_discrete("") + 
+  facet_wrap(~down, ncol = 1) +
+  ggtitle("EPA by Down Goal to Go Inside 5", 
+          subtitle = paste0("NFL Plays ", min(nfl_pbp_simple$season), "-", max(nfl_pbp_simple$season), ", Data: NFLfastR" ) 
+          )
+```
+
+
+# Methodology
+
+This work proposes a method to quantify performance of a team, player, and unit for each and every play by how well they performed in the distribution of outcomes in similar situations. Since each situation has varying distribution shapes and properties, values are first quantified as percentiles then mapped via various link functions to well-known distributions. 
+
+## Modeling Distribution of Play Outcomes
+
+In a given football play for the offense the offense either runs a play that results in a yardage gain or loss, or ends in a score (touchdown or safety). 
+
+The following multi-stage model encapsulates what could happen as a result of an offensive play: 
+1. P($T$) where event $T$ is a turnover
+2. P($y \in 0, 1, 2,\ldots, 100 | T$) where y is the possessing team yardline at the end of the play (0 is a touchdown and 100 is a safety).
+3. P($y \in 0, 1, 2,\ldots, 100 | T^c$)
+
+Then the complete distribution of the outcome of the play follows:
+$$
+P(y) = P(y|T)P(T) + P(y|T^c)(1 - P(T)) .
+$$
+
+Then we feed the resulting yardline, down, possessing team into the NFLFastR expected points model such that $z_{i,t,p+1} = E(x_{i,t,p+1}) - E(x_{i,t,p})$
+where $x$ is the eventual points scored at $i \in 0, 1, \ldots, 100$ yardline outcome, $t \in 0,1$ for turnover outcome for play $p$. The resulting value of $z$ is the corresponding Expected Points Added for each possible turnover and yardage outcome of the play.
+
+For resulting touchdowns the expected points is assumed to be 6.96 and for safeties it is assumed as -2.0. The signs are negated if the result of the play is a touchdown or safety for the defensive team. 
+
+### Classification Models
+
+While theoretically the resulting yardline is a continuous value between 0 and 100, it is only recorded in public data as discrete integer values from 0 to 100. An xGBoost classification model is fit for the turnover probability and the two yardline models (one conditional on no turnover and the other conditional on there being a turnover).
+
+```{r, echo=FALSE}
+## load xgboost models
+to_model <- xgb.load("models/to_model_all_season.model")
+to_yrdline_model <- xgb.load("models/to_yrdline_all_season.model")
+no_to_yrdline_model <- xgb.load("models/no_to_yrdline_all_season.model")
+
+unique_yrdline_labels <- 0:100
+n_unique_yrdline_labels <- length(unique_yrdline_labels)
+nfl_schedule <- nflreadr::load_schedules()
+input_season <- max(nfl_schedule$season)
+
+
+
+  #take inputs and create data to use into model
+  home <- 1
+  away <- 0
+  neutral <- 0
+  qb_dropback <- 1
+  ## temperature, wind, outdoors, & grass field
+  outdoors_stadium <- 0
+  surface_grass <- 1
+  temp <- ifelse(outdoors_stadium == 1, 50, -99)
+  wind <- ifelse(outdoors_stadium == 1, 5, -99)
+  #down/distance
+  down <- 3
+  ydstogo <- 10
+  yardline_100 <- 25
+  #current score
+  team_score <- 0
+  opp_score <- 0
+  current_tot_score <- team_score + opp_score
+  current_score_diff <- team_score - opp_score
+  #timeouts
+  team_timeouts <- 3
+  opp_timeouts <- 3
+  #clock
+  half <- 1
+  half_seconds_remaining <- 25*60
+  play_clock <- 15
+  
+  #posteam & home_team
+  # 
+  posteam <- 'ARI'
+  home_team <- case_when(home == 1 ~ posteam,
+                         away == 1 ~ 'IND',#pretend the home_team is Colts (dome team) for now if it's not buffalo
+                         neutral == 1 ~ posteam)
+  defteam <- ifelse(posteam == 'ARI', 'BLT', 'ARI')# default away team (doesn't really matter as long as its different)
+
+  
+
+# Data Wrangling Predicted Distributions ----------------------------------
+
+  
+  #define all variables into one matrix/tibble
+  input_tibble <- tibble(home,
+                         away,
+                         neutral,
+                         qb_dropback,
+                         ## ,
+                         outdoors_stadium,
+                         surface_grass,
+                         temp,
+                         wind,
+                         #down,
+                         down,
+                         ydstogo,
+                         yardline_100,
+                         #current,
+                         current_tot_score,
+                         current_score_diff,
+                         #timeouts,
+                         team_timeouts,
+                         opp_timeouts,
+                         #clock,
+                         half,
+                         half_seconds_remaining,
+                         play_clock,
+                         #teams
+                         posteam,
+                         home_team,
+                         defteam
+  )
+
+  exclude_vars <- c("turnover",
+          "target",
+          "season",
+          "game_id", 
+          "epa",
+          "play_id",
+          "posteam",
+          "home_team",
+          "defteam")
+  
+  #predicted data row
+  predict_play_dist <- input_tibble %>% 
+    select(
+      -any_of(exclude_vars)
+      )
+  
+  predict_play_xgbdata <- xgb.DMatrix(data = as.matrix(predict_play_dist) )
+  
+  # Combine Models to Get Next Play Distribution 
+  predict_to_prob <- predict(to_model,
+                             reshape = TRUE,
+                             predict_play_xgbdata)[,2] 
+  
+  pred_tibble <- tibble(next_yrdline_100 = unique_yrdline_labels,
+                        team_yrdline_prob = predict(no_to_yrdline_model,
+                                                    reshape = TRUE,
+                                                    predict_play_xgbdata)[1,],
+                        opp_yrdline_prob = predict_to_prob*
+                          predict(to_yrdline_model,
+                                  reshape = TRUE,
+                                  predict_play_xgbdata)[1,]
+  ) %>% 
+    pivot_longer(cols = ends_with("_prob"),
+                 values_to = "prob",
+                 names_to = "posteam_label") %>% 
+    #normalize probabilities
+    mutate(prob = prob / sum(prob),
+           posteam_label = str_extract(posteam_label, "team|opp"))
+  
+  #adjust predicted distribution variables based on the yardline result
+  pred_next_play_tibble <- pred_tibble %>% 
+    bind_cols(input_tibble %>% 
+                mutate(season = input_season,
+                       roof = ifelse(outdoors_stadium == 1, 'outdoors', 'dome'))
+    ) %>% 
+    rename(posteam_timeouts_remaining = team_timeouts,
+           defteam_timeouts_remaining = opp_timeouts) %>% 
+    nflfastR::calculate_expected_points() %>% 
+    dplyr::select(ep:last_col()) %>% 
+    #save off starting down, dist, yrdline, score
+    rename(ep_start = ep) %>% 
+    mutate(down_start = down,
+           yardline_100_start = yardline_100,
+           distance_start = ydstogo,
+           score_diff_start = current_score_diff
+    ) %>% 
+    #based on if turnover or not adjust, posteam
+    mutate(posteam_start = posteam,
+           posteam2 = ifelse(posteam_label == 'team', posteam, defteam),
+           defteam2 = ifelse(posteam_label == 'team', defteam, posteam),
+    ) %>% 
+    dplyr::select(-posteam, -defteam) %>% 
+    rename(posteam = posteam2,
+           defteam = defteam2) %>% 
+    #adjust down, ydstogo, posteam based on outcome of play
+    mutate(first_down_yrdge = (yardline_100 - next_yrdline_100) >= ydstogo | posteam_label == "opp",#did you get the required yards or is it a turnover?
+           turnover_on_downs = down == 4 & !first_down_yrdge) %>% 
+    #switch possessing teams if turnover on downs
+    mutate(posteam2 = ifelse(turnover_on_downs, defteam, posteam),
+           defteam2 = ifelse(turnover_on_downs, posteam, defteam),
+    ) %>% 
+    dplyr::select(-posteam, -defteam) %>% 
+    rename(posteam = posteam2,
+           defteam = defteam2) %>%   
+    mutate(
+      down = case_when(turnover_on_downs ~ 1, #turnover on downs
+                       first_down_yrdge ~ 1,#got the first down
+                       next_yrdline_100 %in% c(0,100) ~ NA_real_,#either a TD or Safety so no down
+                       TRUE ~ down + 1), #didn't get the first down
+      ydstogo = case_when(is.na(down) ~ NA_real_,
+                          down == 1 ~ 10,
+                          TRUE ~ next_yrdline_100 - (yardline_100 - ydstogo) 
+      )
+    ) %>% 
+    as_tibble()
+  
+  #for next play, take half_seconds_remaining and subtract 5 with minimum of 1
+  pred_next_play_tibble <- pred_next_play_tibble %>% 
+    mutate(half_seconds_remaining = pmax(half_seconds_remaining - 5, 1))
+  
+  
+  ##TO DO:
+  #1 just keep the EP column
+  #2. replace td's & safeties with 6.95 or 2 etc.
+  #3. make sure the EP column is in the right team's reference for turnover on downs and other turnovers
+  
+  next_play_distribution <- pred_next_play_tibble %>%
+    mutate(season = input_season,
+           roof = ifelse(outdoors_stadium == 1, 'outdoors', 'dome')) %>% 
+    rename(last_yrdline_100 = yardline_100, 
+           yardline_100 = next_yrdline_100) %>% 
+    nflfastR::calculate_expected_points() %>% 
+    dplyr::select(ep:last_col()) %>% 
+    mutate(ep = ifelse(yardline_100 == 0, 6.96, ep),#td value
+           ep = ifelse(yardline_100 == 100, -2, ep),#safety value
+           turnover = posteam != posteam_start,
+           #if ep is for a turnover (or turnover on downs) make value of ep negative
+           ep_new = ifelse(turnover, -ep, ep),
+           epa = ep_new - ep_start,
+           yards_gained = yardline_100_start - yardline_100
+    ) %>% 
+    dplyr::select(season,
+                  posteam,
+                  defteam,
+                  yardline_100,
+                  yards_gained,
+                  ep = ep_new,
+                  epa,
+                  turnover,
+                  prob,
+                  down,
+                  ydstogo,
+                  ends_with("_start")
+    )
+  
+  #calculate the quantile of the actual play & sequence of quantiles for the play
+  quantiles_to_save <- c(0.005, 0.01, seq(0.05, 0.95, by = 0.05), 0.99, 0.995)
+  next_play_distribution <- next_play_distribution %>% 
+    arrange(epa) %>% 
+    mutate(cdf_val = cumsum(prob)) %>% 
+    as_tibble()
+  
+  # Use approx to interpolate
+  quantile_values <- approx(x = next_play_distribution$cdf_val,
+                            y = next_play_distribution$epa,
+                            xout = quantiles_to_save) %>% 
+    bind_rows() %>% 
+    rename(quantile = x,
+           epa = y)
+  
+  #function saved to calculate quantile for this play
+  impute_epa_quantile_fun <- approxfun(y = next_play_distribution$cdf_val,
+                                      x = next_play_distribution$epa)
+  
+  ## combine output play outcome distributions & save
+  # predict_play_dist$play_quantile <- impute_epa_quantile_fun(predict_play_dist$epa)
+
+  # plot epa distribution
+  next_epa_dist_ggplot <- next_play_distribution %>% 
+    ggplot(aes(x = epa, 
+               y = prob,
+               col = turnover)) + 
+    geom_linerange(aes(ymin = 0, ymax = prob),
+                   linewidth = 1.25) + 
+    ylab("Probability") +
+    xlab("EPA") +
+    ggtitle("Predicted EPA Distribution on Play",
+            subtitle = paste0(down,
+                              case_when(down == 1 ~ "st",
+                                        down == 2 ~ "nd",
+                                        down == 3 ~ "rd",
+                                        down == 4 ~ "th"),
+                              " & ",
+                              ydstogo, 
+                              " with ",
+                              yardline_100,
+                              " yds to endzone, ",
+                              case_when(current_score_diff == 0 ~ "tied game.",
+                                        current_score_diff > 0 ~ paste0("up by ", current_score_diff, "."),
+                                        current_score_diff < 0 ~ paste0("down by ", current_score_diff, ".")
+                                        )
+                              )
+            ) +
+    theme_bw() + 
+    theme(legend.position = 'bottom') + 
+    scale_color_discrete("Turnover")
+  
+  next_epa_dist_plotly <- next_epa_dist_ggplot %>% 
+    ggplotly()
+  
+  
+  
+  # plot next yardline distribution
+  next_yrdline_dist_ggplot <- next_play_distribution %>% 
+    ggplot(aes(x = yardline_100, 
+               y = prob,
+               col = turnover)) + 
+    geom_linerange(aes(ymin = 0, ymax = prob),
+                   linewidth = 1.25) + 
+    ylab("Probability") +
+    xlab("Yards From Endzone (Possessing Team at End of Play)") +
+    ggtitle("Predicted Next Yardline on Play",
+            subtitle = paste0(down,
+                              case_when(down == 1 ~ "st",
+                                        down == 2 ~ "nd",
+                                        down == 3 ~ "rd",
+                                        down == 4 ~ "th"),
+                              " & ",
+                              ydstogo, 
+                              " with ",
+                              yardline_100,
+                              " yds to endzone, ",
+                              case_when(current_score_diff == 0 ~ "tied game.",
+                                        current_score_diff > 0 ~ paste0("up by ", current_score_diff, "."),
+                                        current_score_diff < 0 ~ paste0("down by ", current_score_diff, ".")
+                                        )
+                              )
+            ) +
+    theme_bw() + 
+    theme(legend.position = 'bottom') + 
+    scale_color_discrete("Turnover")
+  
+  next_yrdline_dist_plotly <- next_yrdline_dist_ggplot %>% 
+    ggplotly()
+  
+
+  #output plots
+  next_epa_dist_ggplot
+  
+  next_yrdline_dist_ggplot
+  
+```
+

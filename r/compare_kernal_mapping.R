@@ -2,17 +2,21 @@
 library(tidyverse)
 library(nflfastR)
 library(nimble)
-library(aws.s3Seb)
+library(aws.s3)
 bucket_name <- "s3://sagemaker-studio-m35e50pwfmm/"
-
+options(tibble.width = Inf)
 aws.s3::bucket_list_df(paste0(bucket_name, "/football_data/"))
 
 data_filenames <- get_bucket_df(bucket_name) %>% 
+  as_tibble() %>% 
   rename(filename = Key) %>% 
   filter(str_detect(filename, "nfl_data/play_distributions/")) %>% 
   mutate(filetype = str_extract(filename, "quantiles|summary"),
          season = str_extract(filename, "[[:digit:]]{4,}")) %>% 
-  dplyr::select(-name) %>% 
+  dplyr::select(filename,
+                filetype,
+                Bucket, 
+                season) %>% 
   pivot_wider(values_from = "filename", 
               names_from = "filetype")
 
