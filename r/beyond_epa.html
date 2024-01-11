@@ -69,6 +69,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="beyond_epa_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="beyond_epa_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
+<script src="beyond_epa_files/libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="beyond_epa_files/libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
@@ -137,6 +140,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="changing-distributional-shape-of-epa-outcomes">Changing Distributional Shape of EPA Outcomes</h2>
 <p>Let’s look at the distribution of EPA for a pretty neutral situation at midfield for each down and play type (run &amp; pass).</p>
 <div class="cell">
+<details>
+<summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pbp_midfield <span class="ot">&lt;-</span> nfl_pbp_simple <span class="sc">%&gt;%</span> </span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(yardline_100 <span class="sc">==</span> <span class="dv">50</span>,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>         (down <span class="sc">&lt;=</span> <span class="dv">3</span> <span class="sc">&amp;</span> play_type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"pass"</span>, <span class="st">"run"</span>)) <span class="sc">|</span> </span>
@@ -188,6 +193,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"EPA by Down at Midfield with 10 Yards to Go"</span>, </span>
 <span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>          <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"NFL Plays "</span>, <span class="fu">min</span>(nfl_pbp_simple<span class="sc">$</span>season), <span class="st">"-"</span>, <span class="fu">max</span>(nfl_pbp_simple<span class="sc">$</span>season), <span class="st">", Data: NFLfastR"</span> ) </span>
 <span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>          )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
 <p><img src="beyond_epa_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -195,6 +201,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>For each down there is a bimodal distribution of outcomes which gets larger variance and more skewness for each additional down. This matters because the means are pulled away from the center of the distribution towards the side of the skew. Players and teams that are in this situation will get credit or blame for in terms of EPA for simply performing at the median or 50th percentile. For example a 50th percentile performance for a run on 3rd down and 10 at the 50 is worth 0.83 EPA despite it being simply the median outcome!</p>
 <p>We can look at the most common starting field position of the 25 yard line (usually after a kickoff) as well.</p>
 <div class="cell">
+<details>
+<summary>Code</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>pbp_25 <span class="ot">&lt;-</span> nfl_pbp_simple <span class="sc">%&gt;%</span> </span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(yardline_100 <span class="sc">==</span> <span class="dv">25</span>,</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>         (down <span class="sc">&lt;=</span> <span class="dv">3</span> <span class="sc">&amp;</span> play_type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"pass"</span>, <span class="st">"run"</span>)) <span class="sc">|</span> </span>
@@ -246,12 +254,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"EPA by Down at Own 25 with 10 Yards to Go"</span>, </span>
 <span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>          <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"NFL Plays "</span>, <span class="fu">min</span>(nfl_pbp_simple<span class="sc">$</span>season), <span class="st">"-"</span>, <span class="fu">max</span>(nfl_pbp_simple<span class="sc">$</span>season), <span class="st">", Data: NFLfastR"</span> ) </span>
 <span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>          )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
 <p><img src="beyond_epa_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>We can look at an even more extreme example of this, for plays inside the 5 yard line in “goal to go” situations.</p>
 <div class="cell">
+<details>
+<summary>Code</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pbp_goaltogo <span class="ot">&lt;-</span> nfl_pbp_simple <span class="sc">%&gt;%</span> </span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(yardline_100 <span class="sc">&lt;=</span> <span class="dv">5</span>,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>         (down <span class="sc">&lt;=</span> <span class="dv">3</span> <span class="sc">&amp;</span> play_type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"pass"</span>, <span class="st">"run"</span>)) <span class="sc">|</span> </span>
@@ -302,6 +313,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"EPA by Down Goal to Go Inside 5"</span>, </span>
 <span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>          <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"NFL Plays "</span>, <span class="fu">min</span>(nfl_pbp_simple<span class="sc">$</span>season), <span class="st">"-"</span>, <span class="fu">max</span>(nfl_pbp_simple<span class="sc">$</span>season), <span class="st">", Data: NFLfastR"</span> ) </span>
 <span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>          )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
 <p><img src="beyond_epa_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -324,14 +336,837 @@ P(y) = P(y|T)P(T) + P(y|T^c)(1 - P(T)) .
 <h3 class="anchored" data-anchor-id="classification-models">Classification Models</h3>
 <p>While theoretically the resulting yardline is a continuous value between 0 and 100, it is only recorded in public data as discrete integer values from 0 to 100. An xGBoost classification model is fit for the turnover probability and the two yardline models (one conditional on no turnover and the other conditional on there being a turnover).</p>
 <div class="cell">
-<div class="cell-output-display">
-<p><img src="beyond_epa_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="do">## load xgboost models</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>to_model <span class="ot">&lt;-</span> <span class="fu">xgb.load</span>(<span class="st">"models/to_model_all_season.model"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>to_yrdline_model <span class="ot">&lt;-</span> <span class="fu">xgb.load</span>(<span class="st">"models/to_yrdline_all_season.model"</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>no_to_yrdline_model <span class="ot">&lt;-</span> <span class="fu">xgb.load</span>(<span class="st">"models/no_to_yrdline_all_season.model"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>unique_yrdline_labels <span class="ot">&lt;-</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">100</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>n_unique_yrdline_labels <span class="ot">&lt;-</span> <span class="fu">length</span>(unique_yrdline_labels)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>nfl_schedule <span class="ot">&lt;-</span> nflreadr<span class="sc">::</span><span class="fu">load_schedules</span>()</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>input_season <span class="ot">&lt;-</span> <span class="fu">max</span>(nfl_schedule<span class="sc">$</span>season)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">#take inputs and create data to use into model</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  home <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  away <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  neutral <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  qb_dropback <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="do">## temperature, wind, outdoors, &amp; grass field</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  outdoors_stadium <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  surface_grass <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  temp <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(outdoors_stadium <span class="sc">==</span> <span class="dv">1</span>, <span class="dv">50</span>, <span class="sc">-</span><span class="dv">99</span>)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  wind <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(outdoors_stadium <span class="sc">==</span> <span class="dv">1</span>, <span class="dv">5</span>, <span class="sc">-</span><span class="dv">99</span>)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">#down/distance</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  down <span class="ot">&lt;-</span> <span class="dv">3</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  ydstogo <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  yardline_100 <span class="ot">&lt;-</span> <span class="dv">25</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  <span class="co">#current score</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  team_score <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>  opp_score <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>  current_tot_score <span class="ot">&lt;-</span> team_score <span class="sc">+</span> opp_score</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>  current_score_diff <span class="ot">&lt;-</span> team_score <span class="sc">-</span> opp_score</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>  <span class="co">#timeouts</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>  team_timeouts <span class="ot">&lt;-</span> <span class="dv">3</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>  opp_timeouts <span class="ot">&lt;-</span> <span class="dv">3</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>  <span class="co">#clock</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  half <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  half_seconds_remaining <span class="ot">&lt;-</span> <span class="dv">25</span><span class="sc">*</span><span class="dv">60</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>  play_clock <span class="ot">&lt;-</span> <span class="dv">15</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  <span class="co">#posteam &amp; home_team</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  <span class="co"># </span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>  posteam <span class="ot">&lt;-</span> <span class="st">'ARI'</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>  home_team <span class="ot">&lt;-</span> <span class="fu">case_when</span>(home <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> posteam,</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>                         away <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">'IND'</span>,<span class="co">#pretend the home_team is Colts (dome team) for now if it's not buffalo</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>                         neutral <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> posteam)</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>  defteam <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(posteam <span class="sc">==</span> <span class="st">'ARI'</span>, <span class="st">'BLT'</span>, <span class="st">'ARI'</span>)<span class="co"># default away team (doesn't really matter as long as its different)</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Data Wrangling Predicted Distributions ----------------------------------</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">#define all variables into one matrix/tibble</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>  input_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(home,</span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>                         away,</span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>                         neutral,</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>                         qb_dropback,</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>                         <span class="do">## ,</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>                         outdoors_stadium,</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>                         surface_grass,</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>                         temp,</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>                         wind,</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>                         <span class="co">#down,</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>                         down,</span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>                         ydstogo,</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>                         yardline_100,</span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>                         <span class="co">#current,</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>                         current_tot_score,</span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>                         current_score_diff,</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>                         <span class="co">#timeouts,</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>                         team_timeouts,</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>                         opp_timeouts,</span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>                         <span class="co">#clock,</span></span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>                         half,</span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>                         half_seconds_remaining,</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>                         play_clock,</span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>                         <span class="co">#teams</span></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>                         posteam,</span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>                         home_team,</span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>                         defteam</span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>  exclude_vars <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"turnover"</span>,</span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>          <span class="st">"target"</span>,</span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>          <span class="st">"season"</span>,</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>          <span class="st">"game_id"</span>, </span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>          <span class="st">"epa"</span>,</span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a>          <span class="st">"play_id"</span>,</span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>          <span class="st">"posteam"</span>,</span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>          <span class="st">"home_team"</span>,</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>          <span class="st">"defteam"</span>)</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>  <span class="co">#predicted data row</span></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>  predict_play_dist <span class="ot">&lt;-</span> input_tibble <span class="sc">%&gt;%</span> </span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span><span class="fu">any_of</span>(exclude_vars)</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>  predict_play_xgbdata <span class="ot">&lt;-</span> <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> <span class="fu">as.matrix</span>(predict_play_dist) )</span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Combine Models to Get Next Play Distribution </span></span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>  predict_to_prob <span class="ot">&lt;-</span> <span class="fu">predict</span>(to_model,</span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>                             <span class="at">reshape =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>                             predict_play_xgbdata)[,<span class="dv">2</span>] </span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>  pred_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">next_yrdline_100 =</span> unique_yrdline_labels,</span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>                        <span class="at">team_yrdline_prob =</span> <span class="fu">predict</span>(no_to_yrdline_model,</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>                                                    <span class="at">reshape =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>                                                    predict_play_xgbdata)[<span class="dv">1</span>,],</span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>                        <span class="at">opp_yrdline_prob =</span> predict_to_prob<span class="sc">*</span></span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>                          <span class="fu">predict</span>(to_yrdline_model,</span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">reshape =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>                                  predict_play_xgbdata)[<span class="dv">1</span>,]</span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">ends_with</span>(<span class="st">"_prob"</span>),</span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a>                 <span class="at">values_to =</span> <span class="st">"prob"</span>,</span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>                 <span class="at">names_to =</span> <span class="st">"posteam_label"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a>    <span class="co">#normalize probabilities</span></span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">prob =</span> prob <span class="sc">/</span> <span class="fu">sum</span>(prob),</span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>           <span class="at">posteam_label =</span> <span class="fu">str_extract</span>(posteam_label, <span class="st">"team|opp"</span>))</span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a>  <span class="co">#adjust predicted distribution variables based on the yardline result</span></span>
+<span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a>  pred_next_play_tibble <span class="ot">&lt;-</span> pred_tibble <span class="sc">%&gt;%</span> </span>
+<span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a>    <span class="fu">bind_cols</span>(input_tibble <span class="sc">%&gt;%</span> </span>
+<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a>                <span class="fu">mutate</span>(<span class="at">season =</span> input_season,</span>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>                       <span class="at">roof =</span> <span class="fu">ifelse</span>(outdoors_stadium <span class="sc">==</span> <span class="dv">1</span>, <span class="st">'outdoors'</span>, <span class="st">'dome'</span>))</span>
+<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">posteam_timeouts_remaining =</span> team_timeouts,</span>
+<span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a>           <span class="at">defteam_timeouts_remaining =</span> opp_timeouts) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-130"><a href="#cb4-130" aria-hidden="true" tabindex="-1"></a>    nflfastR<span class="sc">::</span><span class="fu">calculate_expected_points</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb4-131"><a href="#cb4-131" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(ep<span class="sc">:</span><span class="fu">last_col</span>()) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-132"><a href="#cb4-132" aria-hidden="true" tabindex="-1"></a>    <span class="co">#save off starting down, dist, yrdline, score</span></span>
+<span id="cb4-133"><a href="#cb4-133" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">ep_start =</span> ep) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-134"><a href="#cb4-134" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">down_start =</span> down,</span>
+<span id="cb4-135"><a href="#cb4-135" aria-hidden="true" tabindex="-1"></a>           <span class="at">yardline_100_start =</span> yardline_100,</span>
+<span id="cb4-136"><a href="#cb4-136" aria-hidden="true" tabindex="-1"></a>           <span class="at">distance_start =</span> ydstogo,</span>
+<span id="cb4-137"><a href="#cb4-137" aria-hidden="true" tabindex="-1"></a>           <span class="at">score_diff_start =</span> current_score_diff</span>
+<span id="cb4-138"><a href="#cb4-138" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-139"><a href="#cb4-139" aria-hidden="true" tabindex="-1"></a>    <span class="co">#based on if turnover or not adjust, posteam</span></span>
+<span id="cb4-140"><a href="#cb4-140" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">posteam_start =</span> posteam,</span>
+<span id="cb4-141"><a href="#cb4-141" aria-hidden="true" tabindex="-1"></a>           <span class="at">posteam2 =</span> <span class="fu">ifelse</span>(posteam_label <span class="sc">==</span> <span class="st">'team'</span>, posteam, defteam),</span>
+<span id="cb4-142"><a href="#cb4-142" aria-hidden="true" tabindex="-1"></a>           <span class="at">defteam2 =</span> <span class="fu">ifelse</span>(posteam_label <span class="sc">==</span> <span class="st">'team'</span>, defteam, posteam),</span>
+<span id="cb4-143"><a href="#cb4-143" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-144"><a href="#cb4-144" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>posteam, <span class="sc">-</span>defteam) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-145"><a href="#cb4-145" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">posteam =</span> posteam2,</span>
+<span id="cb4-146"><a href="#cb4-146" aria-hidden="true" tabindex="-1"></a>           <span class="at">defteam =</span> defteam2) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-147"><a href="#cb4-147" aria-hidden="true" tabindex="-1"></a>    <span class="co">#adjust down, ydstogo, posteam based on outcome of play</span></span>
+<span id="cb4-148"><a href="#cb4-148" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">first_down_yrdge =</span> (yardline_100 <span class="sc">-</span> next_yrdline_100) <span class="sc">&gt;=</span> ydstogo <span class="sc">|</span> posteam_label <span class="sc">==</span> <span class="st">"opp"</span>,<span class="co">#did you get the required yards or is it a turnover?</span></span>
+<span id="cb4-149"><a href="#cb4-149" aria-hidden="true" tabindex="-1"></a>           <span class="at">turnover_on_downs =</span> down <span class="sc">==</span> <span class="dv">4</span> <span class="sc">&amp;</span> <span class="sc">!</span>first_down_yrdge) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-150"><a href="#cb4-150" aria-hidden="true" tabindex="-1"></a>    <span class="co">#switch possessing teams if turnover on downs</span></span>
+<span id="cb4-151"><a href="#cb4-151" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">posteam2 =</span> <span class="fu">ifelse</span>(turnover_on_downs, defteam, posteam),</span>
+<span id="cb4-152"><a href="#cb4-152" aria-hidden="true" tabindex="-1"></a>           <span class="at">defteam2 =</span> <span class="fu">ifelse</span>(turnover_on_downs, posteam, defteam),</span>
+<span id="cb4-153"><a href="#cb4-153" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-154"><a href="#cb4-154" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>posteam, <span class="sc">-</span>defteam) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-155"><a href="#cb4-155" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">posteam =</span> posteam2,</span>
+<span id="cb4-156"><a href="#cb4-156" aria-hidden="true" tabindex="-1"></a>           <span class="at">defteam =</span> defteam2) <span class="sc">%&gt;%</span>   </span>
+<span id="cb4-157"><a href="#cb4-157" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb4-158"><a href="#cb4-158" aria-hidden="true" tabindex="-1"></a>      <span class="at">down =</span> <span class="fu">case_when</span>(turnover_on_downs <span class="sc">~</span> <span class="dv">1</span>, <span class="co">#turnover on downs</span></span>
+<span id="cb4-159"><a href="#cb4-159" aria-hidden="true" tabindex="-1"></a>                       first_down_yrdge <span class="sc">~</span> <span class="dv">1</span>,<span class="co">#got the first down</span></span>
+<span id="cb4-160"><a href="#cb4-160" aria-hidden="true" tabindex="-1"></a>                       next_yrdline_100 <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">100</span>) <span class="sc">~</span> <span class="cn">NA_real_</span>,<span class="co">#either a TD or Safety so no down</span></span>
+<span id="cb4-161"><a href="#cb4-161" aria-hidden="true" tabindex="-1"></a>                       <span class="cn">TRUE</span> <span class="sc">~</span> down <span class="sc">+</span> <span class="dv">1</span>), <span class="co">#didn't get the first down</span></span>
+<span id="cb4-162"><a href="#cb4-162" aria-hidden="true" tabindex="-1"></a>      <span class="at">ydstogo =</span> <span class="fu">case_when</span>(<span class="fu">is.na</span>(down) <span class="sc">~</span> <span class="cn">NA_real_</span>,</span>
+<span id="cb4-163"><a href="#cb4-163" aria-hidden="true" tabindex="-1"></a>                          down <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="dv">10</span>,</span>
+<span id="cb4-164"><a href="#cb4-164" aria-hidden="true" tabindex="-1"></a>                          <span class="cn">TRUE</span> <span class="sc">~</span> next_yrdline_100 <span class="sc">-</span> (yardline_100 <span class="sc">-</span> ydstogo) </span>
+<span id="cb4-165"><a href="#cb4-165" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb4-166"><a href="#cb4-166" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-167"><a href="#cb4-167" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>()</span>
+<span id="cb4-168"><a href="#cb4-168" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-169"><a href="#cb4-169" aria-hidden="true" tabindex="-1"></a>  <span class="co">#for next play, take half_seconds_remaining and subtract 5 with minimum of 1</span></span>
+<span id="cb4-170"><a href="#cb4-170" aria-hidden="true" tabindex="-1"></a>  pred_next_play_tibble <span class="ot">&lt;-</span> pred_next_play_tibble <span class="sc">%&gt;%</span> </span>
+<span id="cb4-171"><a href="#cb4-171" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">half_seconds_remaining =</span> <span class="fu">pmax</span>(half_seconds_remaining <span class="sc">-</span> <span class="dv">5</span>, <span class="dv">1</span>))</span>
+<span id="cb4-172"><a href="#cb4-172" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-173"><a href="#cb4-173" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-174"><a href="#cb4-174" aria-hidden="true" tabindex="-1"></a>  <span class="do">##TO DO:</span></span>
+<span id="cb4-175"><a href="#cb4-175" aria-hidden="true" tabindex="-1"></a>  <span class="co">#1 just keep the EP column</span></span>
+<span id="cb4-176"><a href="#cb4-176" aria-hidden="true" tabindex="-1"></a>  <span class="co">#2. replace td's &amp; safeties with 6.95 or 2 etc.</span></span>
+<span id="cb4-177"><a href="#cb4-177" aria-hidden="true" tabindex="-1"></a>  <span class="co">#3. make sure the EP column is in the right team's reference for turnover on downs and other turnovers</span></span>
+<span id="cb4-178"><a href="#cb4-178" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-179"><a href="#cb4-179" aria-hidden="true" tabindex="-1"></a>  next_play_distribution <span class="ot">&lt;-</span> pred_next_play_tibble <span class="sc">%&gt;%</span></span>
+<span id="cb4-180"><a href="#cb4-180" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">season =</span> input_season,</span>
+<span id="cb4-181"><a href="#cb4-181" aria-hidden="true" tabindex="-1"></a>           <span class="at">roof =</span> <span class="fu">ifelse</span>(outdoors_stadium <span class="sc">==</span> <span class="dv">1</span>, <span class="st">'outdoors'</span>, <span class="st">'dome'</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-182"><a href="#cb4-182" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">last_yrdline_100 =</span> yardline_100, </span>
+<span id="cb4-183"><a href="#cb4-183" aria-hidden="true" tabindex="-1"></a>           <span class="at">yardline_100 =</span> next_yrdline_100) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-184"><a href="#cb4-184" aria-hidden="true" tabindex="-1"></a>    nflfastR<span class="sc">::</span><span class="fu">calculate_expected_points</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb4-185"><a href="#cb4-185" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(ep<span class="sc">:</span><span class="fu">last_col</span>()) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-186"><a href="#cb4-186" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">ep =</span> <span class="fu">ifelse</span>(yardline_100 <span class="sc">==</span> <span class="dv">0</span>, <span class="fl">6.96</span>, ep),<span class="co">#td value</span></span>
+<span id="cb4-187"><a href="#cb4-187" aria-hidden="true" tabindex="-1"></a>           <span class="at">ep =</span> <span class="fu">ifelse</span>(yardline_100 <span class="sc">==</span> <span class="dv">100</span>, <span class="sc">-</span><span class="dv">2</span>, ep),<span class="co">#safety value</span></span>
+<span id="cb4-188"><a href="#cb4-188" aria-hidden="true" tabindex="-1"></a>           <span class="at">turnover =</span> posteam <span class="sc">!=</span> posteam_start,</span>
+<span id="cb4-189"><a href="#cb4-189" aria-hidden="true" tabindex="-1"></a>           <span class="co">#if ep is for a turnover (or turnover on downs) make value of ep negative</span></span>
+<span id="cb4-190"><a href="#cb4-190" aria-hidden="true" tabindex="-1"></a>           <span class="at">ep_new =</span> <span class="fu">ifelse</span>(turnover, <span class="sc">-</span>ep, ep),</span>
+<span id="cb4-191"><a href="#cb4-191" aria-hidden="true" tabindex="-1"></a>           <span class="at">epa =</span> ep_new <span class="sc">-</span> ep_start,</span>
+<span id="cb4-192"><a href="#cb4-192" aria-hidden="true" tabindex="-1"></a>           <span class="at">yards_gained =</span> yardline_100_start <span class="sc">-</span> yardline_100</span>
+<span id="cb4-193"><a href="#cb4-193" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-194"><a href="#cb4-194" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(season,</span>
+<span id="cb4-195"><a href="#cb4-195" aria-hidden="true" tabindex="-1"></a>                  posteam,</span>
+<span id="cb4-196"><a href="#cb4-196" aria-hidden="true" tabindex="-1"></a>                  defteam,</span>
+<span id="cb4-197"><a href="#cb4-197" aria-hidden="true" tabindex="-1"></a>                  yardline_100,</span>
+<span id="cb4-198"><a href="#cb4-198" aria-hidden="true" tabindex="-1"></a>                  yards_gained,</span>
+<span id="cb4-199"><a href="#cb4-199" aria-hidden="true" tabindex="-1"></a>                  <span class="at">ep =</span> ep_new,</span>
+<span id="cb4-200"><a href="#cb4-200" aria-hidden="true" tabindex="-1"></a>                  epa,</span>
+<span id="cb4-201"><a href="#cb4-201" aria-hidden="true" tabindex="-1"></a>                  turnover,</span>
+<span id="cb4-202"><a href="#cb4-202" aria-hidden="true" tabindex="-1"></a>                  prob,</span>
+<span id="cb4-203"><a href="#cb4-203" aria-hidden="true" tabindex="-1"></a>                  down,</span>
+<span id="cb4-204"><a href="#cb4-204" aria-hidden="true" tabindex="-1"></a>                  ydstogo,</span>
+<span id="cb4-205"><a href="#cb4-205" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">ends_with</span>(<span class="st">"_start"</span>)</span>
+<span id="cb4-206"><a href="#cb4-206" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb4-207"><a href="#cb4-207" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-208"><a href="#cb4-208" aria-hidden="true" tabindex="-1"></a>  <span class="co">#calculate the quantile of the actual play &amp; sequence of quantiles for the play</span></span>
+<span id="cb4-209"><a href="#cb4-209" aria-hidden="true" tabindex="-1"></a>  quantiles_to_save <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.005</span>, <span class="fl">0.01</span>, <span class="fu">seq</span>(<span class="fl">0.05</span>, <span class="fl">0.95</span>, <span class="at">by =</span> <span class="fl">0.05</span>), <span class="fl">0.99</span>, <span class="fl">0.995</span>)</span>
+<span id="cb4-210"><a href="#cb4-210" aria-hidden="true" tabindex="-1"></a>  next_play_distribution <span class="ot">&lt;-</span> next_play_distribution <span class="sc">%&gt;%</span> </span>
+<span id="cb4-211"><a href="#cb4-211" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(epa) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-212"><a href="#cb4-212" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">cdf_val =</span> <span class="fu">cumsum</span>(prob)) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-213"><a href="#cb4-213" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>()</span>
+<span id="cb4-214"><a href="#cb4-214" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-215"><a href="#cb4-215" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Use approx to interpolate</span></span>
+<span id="cb4-216"><a href="#cb4-216" aria-hidden="true" tabindex="-1"></a>  quantile_values <span class="ot">&lt;-</span> <span class="fu">approx</span>(<span class="at">x =</span> next_play_distribution<span class="sc">$</span>cdf_val,</span>
+<span id="cb4-217"><a href="#cb4-217" aria-hidden="true" tabindex="-1"></a>                            <span class="at">y =</span> next_play_distribution<span class="sc">$</span>epa,</span>
+<span id="cb4-218"><a href="#cb4-218" aria-hidden="true" tabindex="-1"></a>                            <span class="at">xout =</span> quantiles_to_save) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-219"><a href="#cb4-219" aria-hidden="true" tabindex="-1"></a>    <span class="fu">bind_rows</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb4-220"><a href="#cb4-220" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">quantile =</span> x,</span>
+<span id="cb4-221"><a href="#cb4-221" aria-hidden="true" tabindex="-1"></a>           <span class="at">epa =</span> y)</span>
+<span id="cb4-222"><a href="#cb4-222" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-223"><a href="#cb4-223" aria-hidden="true" tabindex="-1"></a>  <span class="co">#function saved to calculate quantile for this play</span></span>
+<span id="cb4-224"><a href="#cb4-224" aria-hidden="true" tabindex="-1"></a>  impute_epa_quantile_fun <span class="ot">&lt;-</span> <span class="fu">approxfun</span>(<span class="at">y =</span> next_play_distribution<span class="sc">$</span>cdf_val,</span>
+<span id="cb4-225"><a href="#cb4-225" aria-hidden="true" tabindex="-1"></a>                                      <span class="at">x =</span> next_play_distribution<span class="sc">$</span>epa)</span>
+<span id="cb4-226"><a href="#cb4-226" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-227"><a href="#cb4-227" aria-hidden="true" tabindex="-1"></a>  <span class="do">## combine output play outcome distributions &amp; save</span></span>
+<span id="cb4-228"><a href="#cb4-228" aria-hidden="true" tabindex="-1"></a>  <span class="co"># predict_play_dist$play_quantile &lt;- impute_epa_quantile_fun(predict_play_dist$epa)</span></span>
+<span id="cb4-229"><a href="#cb4-229" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-230"><a href="#cb4-230" aria-hidden="true" tabindex="-1"></a>  <span class="co"># plot epa distribution</span></span>
+<span id="cb4-231"><a href="#cb4-231" aria-hidden="true" tabindex="-1"></a>  next_epa_dist_ggplot <span class="ot">&lt;-</span> next_play_distribution <span class="sc">%&gt;%</span> </span>
+<span id="cb4-232"><a href="#cb4-232" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> epa, </span>
+<span id="cb4-233"><a href="#cb4-233" aria-hidden="true" tabindex="-1"></a>               <span class="at">y =</span> prob,</span>
+<span id="cb4-234"><a href="#cb4-234" aria-hidden="true" tabindex="-1"></a>               <span class="at">col =</span> turnover)) <span class="sc">+</span> </span>
+<span id="cb4-235"><a href="#cb4-235" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_linerange</span>(<span class="fu">aes</span>(<span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> prob),</span>
+<span id="cb4-236"><a href="#cb4-236" aria-hidden="true" tabindex="-1"></a>                   <span class="at">linewidth =</span> <span class="fl">1.25</span>) <span class="sc">+</span> </span>
+<span id="cb4-237"><a href="#cb4-237" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ylab</span>(<span class="st">"Probability"</span>) <span class="sc">+</span></span>
+<span id="cb4-238"><a href="#cb4-238" aria-hidden="true" tabindex="-1"></a>    <span class="fu">xlab</span>(<span class="st">"EPA"</span>) <span class="sc">+</span></span>
+<span id="cb4-239"><a href="#cb4-239" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggtitle</span>(<span class="st">"Predicted EPA Distribution on Play"</span>,</span>
+<span id="cb4-240"><a href="#cb4-240" aria-hidden="true" tabindex="-1"></a>            <span class="at">subtitle =</span> <span class="fu">paste0</span>(down,</span>
+<span id="cb4-241"><a href="#cb4-241" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">case_when</span>(down <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"st"</span>,</span>
+<span id="cb4-242"><a href="#cb4-242" aria-hidden="true" tabindex="-1"></a>                                        down <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"nd"</span>,</span>
+<span id="cb4-243"><a href="#cb4-243" aria-hidden="true" tabindex="-1"></a>                                        down <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"rd"</span>,</span>
+<span id="cb4-244"><a href="#cb4-244" aria-hidden="true" tabindex="-1"></a>                                        down <span class="sc">==</span> <span class="dv">4</span> <span class="sc">~</span> <span class="st">"th"</span>),</span>
+<span id="cb4-245"><a href="#cb4-245" aria-hidden="true" tabindex="-1"></a>                              <span class="st">" &amp; "</span>,</span>
+<span id="cb4-246"><a href="#cb4-246" aria-hidden="true" tabindex="-1"></a>                              ydstogo, </span>
+<span id="cb4-247"><a href="#cb4-247" aria-hidden="true" tabindex="-1"></a>                              <span class="st">" with "</span>,</span>
+<span id="cb4-248"><a href="#cb4-248" aria-hidden="true" tabindex="-1"></a>                              yardline_100,</span>
+<span id="cb4-249"><a href="#cb4-249" aria-hidden="true" tabindex="-1"></a>                              <span class="st">" yds to endzone, "</span>,</span>
+<span id="cb4-250"><a href="#cb4-250" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">case_when</span>(current_score_diff <span class="sc">==</span> <span class="dv">0</span> <span class="sc">~</span> <span class="st">"tied game."</span>,</span>
+<span id="cb4-251"><a href="#cb4-251" aria-hidden="true" tabindex="-1"></a>                                        current_score_diff <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"up by "</span>, current_score_diff, <span class="st">"."</span>),</span>
+<span id="cb4-252"><a href="#cb4-252" aria-hidden="true" tabindex="-1"></a>                                        current_score_diff <span class="sc">&lt;</span> <span class="dv">0</span> <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"down by "</span>, current_score_diff, <span class="st">"."</span>)</span>
+<span id="cb4-253"><a href="#cb4-253" aria-hidden="true" tabindex="-1"></a>                                        )</span>
+<span id="cb4-254"><a href="#cb4-254" aria-hidden="true" tabindex="-1"></a>                              )</span>
+<span id="cb4-255"><a href="#cb4-255" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">+</span></span>
+<span id="cb4-256"><a href="#cb4-256" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>() <span class="sc">+</span> </span>
+<span id="cb4-257"><a href="#cb4-257" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">'bottom'</span>) <span class="sc">+</span> </span>
+<span id="cb4-258"><a href="#cb4-258" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_color_discrete</span>(<span class="st">"Turnover"</span>)</span>
+<span id="cb4-259"><a href="#cb4-259" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-260"><a href="#cb4-260" aria-hidden="true" tabindex="-1"></a>  next_epa_dist_plotly <span class="ot">&lt;-</span> next_epa_dist_ggplot <span class="sc">%&gt;%</span> </span>
+<span id="cb4-261"><a href="#cb4-261" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplotly</span>()</span>
+<span id="cb4-262"><a href="#cb4-262" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-263"><a href="#cb4-263" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-264"><a href="#cb4-264" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-265"><a href="#cb4-265" aria-hidden="true" tabindex="-1"></a>  <span class="co"># plot next yardline distribution</span></span>
+<span id="cb4-266"><a href="#cb4-266" aria-hidden="true" tabindex="-1"></a>  next_yrdline_dist_ggplot <span class="ot">&lt;-</span> next_play_distribution <span class="sc">%&gt;%</span> </span>
+<span id="cb4-267"><a href="#cb4-267" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> yardline_100, </span>
+<span id="cb4-268"><a href="#cb4-268" aria-hidden="true" tabindex="-1"></a>               <span class="at">y =</span> prob,</span>
+<span id="cb4-269"><a href="#cb4-269" aria-hidden="true" tabindex="-1"></a>               <span class="at">col =</span> turnover)) <span class="sc">+</span> </span>
+<span id="cb4-270"><a href="#cb4-270" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_linerange</span>(<span class="fu">aes</span>(<span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> prob),</span>
+<span id="cb4-271"><a href="#cb4-271" aria-hidden="true" tabindex="-1"></a>                   <span class="at">linewidth =</span> <span class="fl">1.25</span>) <span class="sc">+</span> </span>
+<span id="cb4-272"><a href="#cb4-272" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ylab</span>(<span class="st">"Probability"</span>) <span class="sc">+</span></span>
+<span id="cb4-273"><a href="#cb4-273" aria-hidden="true" tabindex="-1"></a>    <span class="fu">xlab</span>(<span class="st">"Yards From Endzone (Possessing Team at End of Play)"</span>) <span class="sc">+</span></span>
+<span id="cb4-274"><a href="#cb4-274" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggtitle</span>(<span class="st">"Predicted Next Yardline on Play"</span>,</span>
+<span id="cb4-275"><a href="#cb4-275" aria-hidden="true" tabindex="-1"></a>            <span class="at">subtitle =</span> <span class="fu">paste0</span>(down,</span>
+<span id="cb4-276"><a href="#cb4-276" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">case_when</span>(down <span class="sc">==</span> <span class="dv">1</span> <span class="sc">~</span> <span class="st">"st"</span>,</span>
+<span id="cb4-277"><a href="#cb4-277" aria-hidden="true" tabindex="-1"></a>                                        down <span class="sc">==</span> <span class="dv">2</span> <span class="sc">~</span> <span class="st">"nd"</span>,</span>
+<span id="cb4-278"><a href="#cb4-278" aria-hidden="true" tabindex="-1"></a>                                        down <span class="sc">==</span> <span class="dv">3</span> <span class="sc">~</span> <span class="st">"rd"</span>,</span>
+<span id="cb4-279"><a href="#cb4-279" aria-hidden="true" tabindex="-1"></a>                                        down <span class="sc">==</span> <span class="dv">4</span> <span class="sc">~</span> <span class="st">"th"</span>),</span>
+<span id="cb4-280"><a href="#cb4-280" aria-hidden="true" tabindex="-1"></a>                              <span class="st">" &amp; "</span>,</span>
+<span id="cb4-281"><a href="#cb4-281" aria-hidden="true" tabindex="-1"></a>                              ydstogo, </span>
+<span id="cb4-282"><a href="#cb4-282" aria-hidden="true" tabindex="-1"></a>                              <span class="st">" with "</span>,</span>
+<span id="cb4-283"><a href="#cb4-283" aria-hidden="true" tabindex="-1"></a>                              yardline_100,</span>
+<span id="cb4-284"><a href="#cb4-284" aria-hidden="true" tabindex="-1"></a>                              <span class="st">" yds to endzone, "</span>,</span>
+<span id="cb4-285"><a href="#cb4-285" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">case_when</span>(current_score_diff <span class="sc">==</span> <span class="dv">0</span> <span class="sc">~</span> <span class="st">"tied game."</span>,</span>
+<span id="cb4-286"><a href="#cb4-286" aria-hidden="true" tabindex="-1"></a>                                        current_score_diff <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"up by "</span>, current_score_diff, <span class="st">"."</span>),</span>
+<span id="cb4-287"><a href="#cb4-287" aria-hidden="true" tabindex="-1"></a>                                        current_score_diff <span class="sc">&lt;</span> <span class="dv">0</span> <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"down by "</span>, current_score_diff, <span class="st">"."</span>)</span>
+<span id="cb4-288"><a href="#cb4-288" aria-hidden="true" tabindex="-1"></a>                                        )</span>
+<span id="cb4-289"><a href="#cb4-289" aria-hidden="true" tabindex="-1"></a>                              )</span>
+<span id="cb4-290"><a href="#cb4-290" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">+</span></span>
+<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>() <span class="sc">+</span> </span>
+<span id="cb4-292"><a href="#cb4-292" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">'bottom'</span>) <span class="sc">+</span> </span>
+<span id="cb4-293"><a href="#cb4-293" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_color_discrete</span>(<span class="st">"Turnover"</span>)</span>
+<span id="cb4-294"><a href="#cb4-294" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-295"><a href="#cb4-295" aria-hidden="true" tabindex="-1"></a>  next_yrdline_dist_plotly <span class="ot">&lt;-</span> next_yrdline_dist_ggplot <span class="sc">%&gt;%</span> </span>
+<span id="cb4-296"><a href="#cb4-296" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplotly</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 </div>
+<section id="transitioning-classification-model-to-epa-distribution" class="level4">
+<h4 class="anchored" data-anchor-id="transitioning-classification-model-to-epa-distribution">Transitioning Classification Model to EPA Distribution</h4>
+<p>Using the 202 unique classification outcomes (101 for no turnover and 101 if there’s a turnover), we can then convert the outcome of the play to asses what the new Expected Points of the next play will be. From there we can subtract from the expected points from before the play and get the 202 unique values of EPA that could result from the play outcome.</p>
+<p>To keep things simple, we assume no timeouts remain the same before and after the play. We also assume exactly 5 seconds come of the clock on the play, or until the clock hits 0 on a quarter if there are less than 5 seconds left.</p>
+<p>Plays that result in a touchdown (yardline = 0) are assumed to have expected points of 6.96 while plays that result in a safety (yardline = 100) are assumed to have -2 expected points.</p>
+<p>In the example we have a 3rd and 10 at our other teams 25 yardline (25 yards from endzone), we use the classification models to calculate the probability of the next play resulting in any of the 202 possession &amp; yardline combinations.</p>
+<p>The current model would give an output that looks like this:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>next_yrdline_dist_ggplot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
-<p><img src="beyond_epa_files/figure-html/unnamed-chunk-6-2.png" class="img-fluid" width="672"></p>
+<p><img src="beyond_epa_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Then applying the expected points after each of the possible play outcomes we can develop a distribution of possible EPA outcomes:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>next_epa_dist_ggplot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="beyond_epa_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
+<section id="mapping-distributions" class="level4">
+<h4 class="anchored" data-anchor-id="mapping-distributions">Mapping Distributions</h4>
+<p>For each play in the dataset I saved the quantiles from the estimated EPA distribution from 0.005 to 0.995 in intervals of 0.005. I also calculated the observed EPA value and its quantile in the estimated distribution. For values greater than 0.995 and less than 0.005 I assumed those extremes to protect against extreme tail behavior.</p>
+<p>From there I convert the observed quantiles for each play to different known distributions:</p>
+<ul>
+<li><p>Standard Normal Distribution</p></li>
+<li><p>Standard <em>t</em> distribution with 5 degrees of freedom (1 degree of freedom or <em>Cauchy</em> had erratic behavior so it was omitted)</p></li>
+<li><p>Standard laplace distribution</p></li>
+<li><p>Gamma distribution</p>
+<ul>
+<li>The mean and variance of the gamma were decided to be equivalent to the observed mean and variance of EPA across all offensive plays after you subtract off the smallest observed EPA value so the support is positive like a Gamma distribution.</li>
+</ul></li>
+</ul>
+</section>
+</section>
+</section>
+<section id="simulation-study" class="level2">
+<h2 class="anchored" data-anchor-id="simulation-study">Simulation Study</h2>
+<p>One measure of the effectiveness of EPA has been how well correlated it is with itself on a per play basis for values intra-season or the next season. This is sometimes referred to as <strong>stability</strong>. The thought process is that if a trait or metric is stable for a team or player, it reflects somewhat a measure of skill or ability. This of course isn’t always true as any arbitrary value would have a correlation of 1 with itself and human scouting bias may result in a higher stability since a human knows who they are watching.</p>
+<section id="intra-season-stability" class="level4">
+<h4 class="anchored" data-anchor-id="intra-season-stability">Intra-season Stability</h4>
+<p>I wanted to see if any of these metrics perform better than EPA for both quarterbacks and for team offenses and defenses. For intra-season comparison, I perform a bootstrap simulation by sampling 8 weeks of the season and then comparing those 8 weeks per play numbers to the per play numbers for the remaining weeks.</p>
+<section id="quarterbacks" class="level5">
+<h5 class="anchored" data-anchor-id="quarterbacks">Quarterbacks</h5>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>intra_season_bootstrap_qb_correlation_summary <span class="sc">%&gt;%</span> </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(avg_correlation)) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable_classic_2</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="lightable-classic-2 table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">comp_var_1</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_rank</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">pct_no_1</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_correlation</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">sd_correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">kgamma</td>
+<td style="text-align: right;">2.165</td>
+<td style="text-align: right;">0.577</td>
+<td style="text-align: right;">0.4685426</td>
+<td style="text-align: right;">0.0263641</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">knorm</td>
+<td style="text-align: right;">2.618</td>
+<td style="text-align: right;">0.215</td>
+<td style="text-align: right;">0.4624901</td>
+<td style="text-align: right;">0.0269240</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">kt5</td>
+<td style="text-align: right;">2.583</td>
+<td style="text-align: right;">0.104</td>
+<td style="text-align: right;">0.4624740</td>
+<td style="text-align: right;">0.0266177</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">klaplace</td>
+<td style="text-align: right;">3.644</td>
+<td style="text-align: right;">0.034</td>
+<td style="text-align: right;">0.4598413</td>
+<td style="text-align: right;">0.0266538</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">play_quantile</td>
+<td style="text-align: right;">4.929</td>
+<td style="text-align: right;">0.016</td>
+<td style="text-align: right;">0.4494879</td>
+<td style="text-align: right;">0.0276412</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">epa</td>
+<td style="text-align: right;">5.763</td>
+<td style="text-align: right;">0.030</td>
+<td style="text-align: right;">0.4305393</td>
+<td style="text-align: right;">0.0280615</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">yards_gained</td>
+<td style="text-align: right;">6.720</td>
+<td style="text-align: right;">0.024</td>
+<td style="text-align: right;">0.4134349</td>
+<td style="text-align: right;">0.0294258</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">adj_nya</td>
+<td style="text-align: right;">7.581</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.4021861</td>
+<td style="text-align: right;">0.0283624</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">wpa</td>
+<td style="text-align: right;">8.997</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.3204819</td>
+<td style="text-align: right;">0.0308437</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</section>
+<section id="offenses" class="level5">
+<h5 class="anchored" data-anchor-id="offenses">Offenses</h5>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">#show rankings</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>intra_season_bootstrap_team_off_correlation_summary <span class="sc">%&gt;%</span> </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(avg_correlation)) <span class="sc">%&gt;%</span> </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable_classic_2</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="lightable-classic-2 table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">stat</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_rank</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">pct_no_1</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_correlation</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">sd_correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">knorm</td>
+<td style="text-align: right;">1.649</td>
+<td style="text-align: right;">0.409</td>
+<td style="text-align: right;">0.5486108</td>
+<td style="text-align: right;">0.0188296</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">play_quantile</td>
+<td style="text-align: right;">2.294</td>
+<td style="text-align: right;">0.346</td>
+<td style="text-align: right;">0.5470875</td>
+<td style="text-align: right;">0.0199097</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">kgamma</td>
+<td style="text-align: right;">3.080</td>
+<td style="text-align: right;">0.194</td>
+<td style="text-align: right;">0.5418150</td>
+<td style="text-align: right;">0.0173614</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">kt5</td>
+<td style="text-align: right;">3.605</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.5393409</td>
+<td style="text-align: right;">0.0183805</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">klaplace</td>
+<td style="text-align: right;">5.024</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.5333888</td>
+<td style="text-align: right;">0.0181580</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">epa</td>
+<td style="text-align: right;">5.348</td>
+<td style="text-align: right;">0.051</td>
+<td style="text-align: right;">0.5205935</td>
+<td style="text-align: right;">0.0174090</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</section>
+<section id="defenses" class="level5">
+<h5 class="anchored" data-anchor-id="defenses">Defenses</h5>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>intra_season_bootstrap_team_off_correlation_summary <span class="sc">%&gt;%</span> </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(avg_correlation)) <span class="sc">%&gt;%</span> </span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable_classic_2</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="lightable-classic-2 table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">stat</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_rank</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">pct_no_1</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_correlation</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">sd_correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">knorm</td>
+<td style="text-align: right;">1.649</td>
+<td style="text-align: right;">0.409</td>
+<td style="text-align: right;">0.5486108</td>
+<td style="text-align: right;">0.0188296</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">play_quantile</td>
+<td style="text-align: right;">2.294</td>
+<td style="text-align: right;">0.346</td>
+<td style="text-align: right;">0.5470875</td>
+<td style="text-align: right;">0.0199097</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">kgamma</td>
+<td style="text-align: right;">3.080</td>
+<td style="text-align: right;">0.194</td>
+<td style="text-align: right;">0.5418150</td>
+<td style="text-align: right;">0.0173614</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">kt5</td>
+<td style="text-align: right;">3.605</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.5393409</td>
+<td style="text-align: right;">0.0183805</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">klaplace</td>
+<td style="text-align: right;">5.024</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.5333888</td>
+<td style="text-align: right;">0.0181580</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">epa</td>
+<td style="text-align: right;">5.348</td>
+<td style="text-align: right;">0.051</td>
+<td style="text-align: right;">0.5205935</td>
+<td style="text-align: right;">0.0174090</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</section>
+</section>
+<section id="inter-season-stability" class="level4">
+<h4 class="anchored" data-anchor-id="inter-season-stability">Inter-season Stability</h4>
+<p>For year to year comparison, I perform a bootstrap where I sample 300 unique player <em>x</em> season or team <em>x</em> play type (run/pass) <em>x</em> season in each bootstrap. Then I calculate the Pearson Correlation Coefficent of the previous year’s value to this seasons value. I perform 1000 bootstrap samples.</p>
+<section id="quarterbacks-1" class="level5">
+<h5 class="anchored" data-anchor-id="quarterbacks-1">Quarterbacks</h5>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>inter_season_bootstrap_qb_correlation_summary <span class="sc">%&gt;%</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(avg_correlation)) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable_classic_2</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="lightable-classic-2 table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">stat</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_rank</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">pct_no_1</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_correlation</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">sd_correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">epa</td>
+<td style="text-align: right;">1.536</td>
+<td style="text-align: right;">0.744</td>
+<td style="text-align: right;">0.4198002</td>
+<td style="text-align: right;">0.0522222</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">adj_nya</td>
+<td style="text-align: right;">4.642</td>
+<td style="text-align: right;">0.033</td>
+<td style="text-align: right;">0.3685498</td>
+<td style="text-align: right;">0.0531352</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">wpa</td>
+<td style="text-align: right;">4.877</td>
+<td style="text-align: right;">0.114</td>
+<td style="text-align: right;">0.3653028</td>
+<td style="text-align: right;">0.0557913</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">klaplace</td>
+<td style="text-align: right;">4.243</td>
+<td style="text-align: right;">0.029</td>
+<td style="text-align: right;">0.3606291</td>
+<td style="text-align: right;">0.0591673</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">kt5</td>
+<td style="text-align: right;">5.212</td>
+<td style="text-align: right;">0.007</td>
+<td style="text-align: right;">0.3559117</td>
+<td style="text-align: right;">0.0598880</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">kgamma</td>
+<td style="text-align: right;">5.191</td>
+<td style="text-align: right;">0.027</td>
+<td style="text-align: right;">0.3541468</td>
+<td style="text-align: right;">0.0595235</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">yards_gained</td>
+<td style="text-align: right;">5.781</td>
+<td style="text-align: right;">0.026</td>
+<td style="text-align: right;">0.3515248</td>
+<td style="text-align: right;">0.0503577</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">knorm</td>
+<td style="text-align: right;">5.938</td>
+<td style="text-align: right;">0.006</td>
+<td style="text-align: right;">0.3508226</td>
+<td style="text-align: right;">0.0612303</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">play_quantile</td>
+<td style="text-align: right;">7.580</td>
+<td style="text-align: right;">0.014</td>
+<td style="text-align: right;">0.3331898</td>
+<td style="text-align: right;">0.0633355</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</section>
+<section id="offenses-1" class="level5">
+<h5 class="anchored" data-anchor-id="offenses-1">Offenses</h5>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>inter_season_bootstrap_team_off_correlation_summary <span class="sc">%&gt;%</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(avg_correlation)) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable_classic_2</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="lightable-classic-2 table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">stat</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_rank</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">pct_no_1</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_correlation</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">sd_correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">epa</td>
+<td style="text-align: right;">2.250</td>
+<td style="text-align: right;">0.663</td>
+<td style="text-align: right;">0.4506052</td>
+<td style="text-align: right;">0.0696085</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">knorm</td>
+<td style="text-align: right;">3.110</td>
+<td style="text-align: right;">0.042</td>
+<td style="text-align: right;">0.4151039</td>
+<td style="text-align: right;">0.0656606</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">play_quantile</td>
+<td style="text-align: right;">3.440</td>
+<td style="text-align: right;">0.166</td>
+<td style="text-align: right;">0.4141272</td>
+<td style="text-align: right;">0.0659080</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">kt5</td>
+<td style="text-align: right;">3.729</td>
+<td style="text-align: right;">0.020</td>
+<td style="text-align: right;">0.4103262</td>
+<td style="text-align: right;">0.0660543</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">kgamma</td>
+<td style="text-align: right;">3.946</td>
+<td style="text-align: right;">0.095</td>
+<td style="text-align: right;">0.4079203</td>
+<td style="text-align: right;">0.0648523</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">klaplace</td>
+<td style="text-align: right;">4.525</td>
+<td style="text-align: right;">0.014</td>
+<td style="text-align: right;">0.4061664</td>
+<td style="text-align: right;">0.0662686</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</section>
+<section id="defenses-1" class="level5">
+<h5 class="anchored" data-anchor-id="defenses-1">Defenses</h5>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>inter_season_bootstrap_team_def_correlation_summary <span class="sc">%&gt;%</span> </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(avg_correlation)) <span class="sc">%&gt;%</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  kableExtra<span class="sc">::</span><span class="fu">kable_classic_2</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="lightable-classic-2 table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">stat</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_rank</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">pct_no_1</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">avg_correlation</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">sd_correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">epa</td>
+<td style="text-align: right;">1.815</td>
+<td style="text-align: right;">0.690</td>
+<td style="text-align: right;">0.4229399</td>
+<td style="text-align: right;">0.0698401</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">kgamma</td>
+<td style="text-align: right;">2.567</td>
+<td style="text-align: right;">0.188</td>
+<td style="text-align: right;">0.3832876</td>
+<td style="text-align: right;">0.0675689</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">play_quantile</td>
+<td style="text-align: right;">3.330</td>
+<td style="text-align: right;">0.116</td>
+<td style="text-align: right;">0.3641721</td>
+<td style="text-align: right;">0.0679347</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">knorm</td>
+<td style="text-align: right;">3.686</td>
+<td style="text-align: right;">0.002</td>
+<td style="text-align: right;">0.3568953</td>
+<td style="text-align: right;">0.0677368</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">kt5</td>
+<td style="text-align: right;">4.322</td>
+<td style="text-align: right;">0.002</td>
+<td style="text-align: right;">0.3494288</td>
+<td style="text-align: right;">0.0681030</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">klaplace</td>
+<td style="text-align: right;">5.280</td>
+<td style="text-align: right;">0.002</td>
+<td style="text-align: right;">0.3421529</td>
+<td style="text-align: right;">0.0685885</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="discussion" class="level2">
+<h2 class="anchored" data-anchor-id="discussion">Discussion</h2>
+<p>For intra-season metrics, the standard normal transformed values tend to correlate with the other half of the season the best while EPA does quite poorly.</p>
+<p>For season to season it tends to be almost the opposite where EPA has a higher stability than the others. This may be because EPA does best with larger sample sizes but struggles with smaller samples due to the “cliffs” that exist around the first down line.</p>
+<p>When evaluating teams on the season EPA is still a very good metric, but for players perhaps there is something better. If we want to evaluate the value of a player on a play, should we really discount them several points because they gained 9 yards on 3rd and 10 instead of 10? Yes, 10 yards is worth a lot more, but the player got most of the way there and there is a lot (but maybe not complete) randomness between getting 9 yards and 10.</p>
+<p>Another idea is to model directly the distribution of EPA on a play via mixture of normals, or a distributional Random Forest.</p>
+<p>The idea ultimately is to be able to compare two plays in two completely different contexts and know which result was more impressive given expectation (accounting for play call such as run or pass) in a predictive sense. Otherwise using any play outcome to evaluate players who participated in that play is going to suffer from some bias of players being used in certain settings, some of which are more likely to have bigger plays than others (or vice-versa) and none of it being due to the ability (or lack thereof) of the player.</p>
 </section>
 </section>
 

@@ -1,7 +1,10 @@
 ---
 title: "Beyond EPA"
 author: "Paul Sabin"
-format: html
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show the code"
 execute:
   warning: false
   message: false
@@ -18,7 +21,11 @@ library(nflfastR)
 library(ggridges)
 library(xgboost)
 library(plotly)
+library(kableExtra)
 options(tibble.width = Inf)
+
+#load results of bootstraps
+load("compare_epa_alternatives.RData")
 
 total_seasons <- 13
 cross_validate <- FALSE#if true, run through and cross validate, if not fit model on all seasons
@@ -122,7 +129,6 @@ nfl_pbp_simple <- nfl_pbp %>%
 
 ```
 
-
 # Background of EPA
 
 Expected Points Added (EPA) has emerged from an obscure stat from quants to the mainstream, occasionally making television broadcasts and as evidence for and against TV personality's talking points analyzing football performance. *Background lit review on history of EPA models from Carter & Machol, to Burke, to Baldwin, to Brill.*
@@ -143,11 +149,11 @@ This begs the question, do we use EPA as the preferred metric because it's the b
 
 # Flaws of EPA
 
-This paper will examine three main flaws that EPA has. 
+This paper will examine three main flaws that EPA has.
 
-1. The large jump in EPA at the 1st down line vs 1 yard short of the first down line while the difference in player and team performance can largely be attributed to chance.
-2. EPA does not follow a symmetric unimodal distribution, and depending on the situation it can skew left, skew right, be bimodal, unimodal, and more! This means that EPA per play for a team, unit, or player is affected largely by situation before the results of the play occur.
-3. Selection Bias. Until recently all EPA models were built off observed plays. Better teams have more plays in the opposing territory, biasing the expectation towards better teams in those situations. Brill & Wyner 2024 use catalytic priors in an effort to adjust expected points models for this selection bias.
+1.  The large jump in EPA at the 1st down line vs 1 yard short of the first down line while the difference in player and team performance can largely be attributed to chance.
+2.  EPA does not follow a symmetric unimodal distribution, and depending on the situation it can skew left, skew right, be bimodal, unimodal, and more! This means that EPA per play for a team, unit, or player is affected largely by situation before the results of the play occur.
+3.  Selection Bias. Until recently all EPA models were built off observed plays. Better teams have more plays in the opposing territory, biasing the expectation towards better teams in those situations. Brill & Wyner 2024 use catalytic priors in an effort to adjust expected points models for this selection bias.
 
 ## Yards vs EPA
 
@@ -187,7 +193,7 @@ While in yards the team gained 10% more in situation B than A, in EPA one play i
 
 ## Changing Distributional Shape of EPA Outcomes
 
-Let's look at the distribution of EPA for a pretty neutral situation at midfield for each down and play type (run & pass). 
+Let's look at the distribution of EPA for a pretty neutral situation at midfield for each down and play type (run & pass).
 
 ```{r}
 
@@ -244,11 +250,9 @@ pbp_midfield %>%
           )
 ```
 
-
 For each down there is a bimodal distribution of outcomes which gets larger variance and more skewness for each additional down. This matters because the means are pulled away from the center of the distribution towards the side of the skew. Players and teams that are in this situation will get credit or blame for in terms of EPA for simply performing at the median or 50th percentile. For example a 50th percentile performance for a run on 3rd down and 10 at the 50 is worth `r pbp_midfield_summary_long %>% filter(down == 3, play_type == "run", stat == "median") %>% pull(epa) %>% round(digits = 2)` EPA despite it being simply the median outcome!
 
-We can look at the most common starting field position of the 25 yard line (usually after a kickoff) as well. 
-
+We can look at the most common starting field position of the 25 yard line (usually after a kickoff) as well.
 
 ```{r}
 
@@ -305,9 +309,7 @@ pbp_25 %>%
           )
 ```
 
-
-We can look at an even more extreme example of this, for plays inside the 5 yard line in "goal to go" situations. 
-
+We can look at an even more extreme example of this, for plays inside the 5 yard line in "goal to go" situations.
 
 ```{r}
 
@@ -363,35 +365,29 @@ pbp_goaltogo %>%
           )
 ```
 
-
 # Methodology
 
-This work proposes a method to quantify performance of a team, player, and unit for each and every play by how well they performed in the distribution of outcomes in similar situations. Since each situation has varying distribution shapes and properties, values are first quantified as percentiles then mapped via various link functions to well-known distributions. 
+This work proposes a method to quantify performance of a team, player, and unit for each and every play by how well they performed in the distribution of outcomes in similar situations. Since each situation has varying distribution shapes and properties, values are first quantified as percentiles then mapped via various link functions to well-known distributions.
 
 ## Modeling Distribution of Play Outcomes
 
-In a given football play for the offense the offense either runs a play that results in a yardage gain or loss, or ends in a score (touchdown or safety). 
+In a given football play for the offense the offense either runs a play that results in a yardage gain or loss, or ends in a score (touchdown or safety).
 
-The following multi-stage model encapsulates what could happen as a result of an offensive play: 
-1. P($T$) where event $T$ is a turnover
-2. P($y \in 0, 1, 2,\ldots, 100 | T$) where y is the possessing team yardline at the end of the play (0 is a touchdown and 100 is a safety).
-3. P($y \in 0, 1, 2,\ldots, 100 | T^c$)
+The following multi-stage model encapsulates what could happen as a result of an offensive play: 1. P($T$) where event $T$ is a turnover 2. P($y \in 0, 1, 2,\ldots, 100 | T$) where y is the possessing team yardline at the end of the play (0 is a touchdown and 100 is a safety). 3. P($y \in 0, 1, 2,\ldots, 100 | T^c$)
 
-Then the complete distribution of the outcome of the play follows:
-$$
+Then the complete distribution of the outcome of the play follows: $$
 P(y) = P(y|T)P(T) + P(y|T^c)(1 - P(T)) .
 $$
 
-Then we feed the resulting yardline, down, possessing team into the NFLFastR expected points model such that $z_{i,t,p+1} = E(x_{i,t,p+1}) - E(x_{i,t,p})$
-where $x$ is the eventual points scored at $i \in 0, 1, \ldots, 100$ yardline outcome, $t \in 0,1$ for turnover outcome for play $p$. The resulting value of $z$ is the corresponding Expected Points Added for each possible turnover and yardage outcome of the play.
+Then we feed the resulting yardline, down, possessing team into the NFLFastR expected points model such that $z_{i,t,p+1} = E(x_{i,t,p+1}) - E(x_{i,t,p})$ where $x$ is the eventual points scored at $i \in 0, 1, \ldots, 100$ yardline outcome, $t \in 0,1$ for turnover outcome for play $p$. The resulting value of $z$ is the corresponding Expected Points Added for each possible turnover and yardage outcome of the play.
 
-For resulting touchdowns the expected points is assumed to be 6.96 and for safeties it is assumed as -2.0. The signs are negated if the result of the play is a touchdown or safety for the defensive team. 
+For resulting touchdowns the expected points is assumed to be 6.96 and for safeties it is assumed as -2.0. The signs are negated if the result of the play is a touchdown or safety for the defensive team.
 
 ### Classification Models
 
 While theoretically the resulting yardline is a continuous value between 0 and 100, it is only recorded in public data as discrete integer values from 0 to 100. An xGBoost classification model is fit for the turnover probability and the two yardline models (one conditional on no turnover and the other conditional on there being a turnover).
 
-```{r, echo=FALSE}
+```{r}
 ## load xgboost models
 to_model <- xgb.load("models/to_model_all_season.model")
 to_yrdline_model <- xgb.load("models/to_yrdline_all_season.model")
@@ -689,11 +685,139 @@ input_season <- max(nfl_schedule$season)
   next_yrdline_dist_plotly <- next_yrdline_dist_ggplot %>% 
     ggplotly()
   
-
-  #output plots
-  next_epa_dist_ggplot
-  
-  next_yrdline_dist_ggplot
-  
 ```
+
+#### Transitioning Classification Model to EPA Distribution
+
+Using the 202 unique classification outcomes (101 for no turnover and 101 if there's a turnover), we can then convert the outcome of the play to asses what the new Expected Points of the next play will be. From there we can subtract from the expected points from before the play and get the 202 unique values of EPA that could result from the play outcome.
+
+To keep things simple, we assume no timeouts remain the same before and after the play. We also assume exactly 5 seconds come of the clock on the play, or until the clock hits 0 on a quarter if there are less than 5 seconds left.
+
+Plays that result in a touchdown (yardline = 0) are assumed to have expected points of 6.96 while plays that result in a safety (yardline = 100) are assumed to have -2 expected points.
+
+In the example we have a 3rd and 10 at our other teams 25 yardline (25 yards from endzone), we use the classification models to calculate the probability of the next play resulting in any of the 202 possession & yardline combinations.
+
+The current model would give an output that looks like this:
+
+```{r}
+next_yrdline_dist_ggplot
+
+```
+
+Then applying the expected points after each of the possible play outcomes we can develop a distribution of possible EPA outcomes:
+
+```{r}
+
+next_epa_dist_ggplot
+```
+
+#### Mapping Distributions
+
+For each play in the dataset I saved the quantiles from the estimated EPA distribution from 0.005 to 0.995 in intervals of 0.005. I also calculated the observed EPA value and its quantile in the estimated distribution. For values greater than 0.995 and less than 0.005 I assumed those extremes to protect against extreme tail behavior.
+
+From there I convert the observed quantiles for each play to different known distributions:
+
+-   Standard Normal Distribution
+
+-   Standard *t* distribution with 5 degrees of freedom (1 degree of freedom or *Cauchy* had erratic behavior so it was omitted)
+
+-   Standard laplace distribution
+
+-   Gamma distribution
+
+    -   The mean and variance of the gamma were decided to be equivalent to the observed mean and variance of EPA across all offensive plays after you subtract off the smallest observed EPA value so the support is positive like a Gamma distribution.
+
+## Simulation Study
+
+One measure of the effectiveness of EPA has been how well correlated it is with itself on a per play basis for values intra-season or the next season. This is sometimes referred to as **stability**. The thought process is that if a trait or metric is stable for a team or player, it reflects somewhat a measure of skill or ability. This of course isn't always true as any arbitrary value would have a correlation of 1 with itself and human scouting bias may result in a higher stability since a human knows who they are watching.
+
+#### Intra-season Stability
+
+I wanted to see if any of these metrics perform better than EPA for both quarterbacks and for team offenses and defenses. For intra-season comparison, I perform a bootstrap simulation by sampling 8 weeks of the season and then comparing those 8 weeks per play numbers to the per play numbers for the remaining weeks.
+
+
+
+##### Quarterbacks
+
+```{r}
+intra_season_bootstrap_qb_correlation_summary %>% 
+  arrange(desc(avg_correlation)) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_classic_2()
+```
+
+##### Offenses
+
+```{r}
+#show rankings
+intra_season_bootstrap_team_off_correlation_summary %>% 
+  arrange(desc(avg_correlation)) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_classic_2()
+
+```
+
+
+##### Defenses
+
+```{r}
+intra_season_bootstrap_team_off_correlation_summary %>% 
+  arrange(desc(avg_correlation)) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_classic_2()
+
+```
+
+
+#### Inter-season Stability
+
+For year to year comparison, I perform a bootstrap where I sample 300 unique player *x* season or team *x* play type (run/pass) *x* season in each bootstrap. Then I calculate the Pearson Correlation Coefficent of the previous year's value to this seasons value. I perform 1000 bootstrap samples.
+
+
+
+##### Quarterbacks
+
+```{r}
+inter_season_bootstrap_qb_correlation_summary %>% 
+  arrange(desc(avg_correlation)) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_classic_2()
+```
+
+##### Offenses
+
+```{r}
+inter_season_bootstrap_team_off_correlation_summary %>% 
+  arrange(desc(avg_correlation)) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_classic_2()
+
+```
+
+
+##### Defenses
+
+```{r}
+inter_season_bootstrap_team_def_correlation_summary %>% 
+  arrange(desc(avg_correlation)) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_classic_2()
+
+```
+
+## Discussion
+
+For intra-season metrics, the standard normal transformed values tend to correlate with the other half of the season the best while EPA does quite poorly. 
+
+For season to season it tends to be almost the opposite where EPA has a higher stability than the others. This may be because EPA does best with larger sample sizes but struggles with smaller samples due to the "cliffs" that exist around the first down line. 
+
+When evaluating teams on the season EPA is still a very good metric, but for players perhaps there is something better. If we want to evaluate the value of a player on a play, should we really discount them several points because they gained 9 yards on 3rd and 10 instead of 10? Yes, 10 yards is worth a lot more, but the player got most of the way there and there is a lot (but maybe not complete) randomness between getting 9 yards and 10. 
+
+Another idea is to model directly the distribution of EPA on a play via mixture of normals, or a distributional Random Forest. 
+
+The idea ultimately is to be able to compare two plays in two completely different contexts and know which result was more impressive given expectation (accounting for play call such as run or pass) in a predictive sense. Otherwise using any play outcome to evaluate players who participated in that play is going to suffer from some bias of players being used in certain settings, some of which are more likely to have bigger plays than others (or vice-versa) and none of it being due to the ability (or lack thereof) of the player. 
+
+
+
+
 

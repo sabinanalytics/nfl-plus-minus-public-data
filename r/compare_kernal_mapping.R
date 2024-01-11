@@ -204,20 +204,22 @@ pos_epa_avg <-  epa_avg - floor(min(nfl_qb_pbp$epa))
 gamma_shape <- pos_epa_avg / epa_sd
 gamma_scale <- epa_sd^2 / pos_epa_avg
 
-#### QB One Season to the Next #####
-
-nfl_qb_yearly_metric_summary <- nfl_qb_pbp %>% 
+# INTER Season QB Correlation ---------------------------------------------
+nfl_qb_yearly_metrics <- nfl_qb_pbp %>% 
   mutate(knorm = qnorm(play_quantile),
          kt5 = qt(play_quantile, df = 5),
          klaplace = qdexp(play_quantile),
          kgamma = qgamma(play_quantile, gamma_shape, gamma_scale)
-         ) %>% 
+  ) %>% 
   group_by(season,
            qb,
            qb_id) %>% 
   mutate(n_dropbacks = n()) %>% 
   summarize(across(epa:last_col(), mean)) %>% 
   filter(n_dropbacks >= 50) %>% 
+  ungroup()
+
+nfl_qb_yearly_metric_summary <- nfl_qb_yearly_metrics %>% 
   group_by(qb, qb_id) %>% 
   mutate(prev_epa = lag(epa),
          prev_yards_gained = lag(yards_gained),
@@ -229,24 +231,64 @@ nfl_qb_yearly_metric_summary <- nfl_qb_pbp %>%
          prev_klaplace = lag(klaplace),
          prev_kgamma = lag(kgamma),
          prev_n_dropbacks = lag(n_dropbacks)
-         ) %>% 
+  ) %>% 
   ungroup() %>% 
   filter(complete.cases(.))
+
+n_boot <- 1000
+n_within_boot <- 300
+
+inter_season_bootstrap_qb_correlation <- NULL
+set.seed(5)
+for(b in 1:n_boot){
+
   
-#correlation matrix between all of these
-nfl_qb_yearly_metric_summary_cor <- nfl_qb_yearly_metric_summary %>% 
-  dplyr::select(-season,
-                -qb,
-                -qb_id) %>% 
-  cor()
+  #correlation matrix between all of these
+  nfl_qb_yearly_metric_summary_cor <- nfl_qb_yearly_metric_summary %>% 
+    sample_n(n_within_boot, replace = TRUE) %>% 
+    dplyr::select(-season,
+                  -qb,
+                  -qb_id) %>% 
+    cor()
+  
+  inter_season_bootstrap_qb_correlation <- nfl_qb_yearly_metric_summary_cor[!str_detect(colnames(nfl_qb_yearly_metric_summary_cor), "prev_"),
+                                                                            str_detect(colnames(nfl_qb_yearly_metric_summary_cor), "prev_")] %>% 
+    as_tibble() %>% 
+    mutate(comp_var_2 = colnames(nfl_qb_yearly_metric_summary_cor)[!str_detect(colnames(nfl_qb_yearly_metric_summary_cor), "prev_")] ) %>% 
+    pivot_longer(cols = starts_with("prev_"),
+                 values_to = "correlation", 
+                 names_to = "comp_var_1") %>% 
+    mutate(across(starts_with("comp_var"), ~str_remove(.x, "prev_")),
+           boot = b) %>% 
+    bind_rows(inter_season_bootstrap_qb_correlation)
 
-#only look at last season to this season
-nfl_qb_yearly_metric_summary_cor[!str_detect(colnames(nfl_qb_yearly_metric_summary_cor), "prev_"),
-                                 str_detect(colnames(nfl_qb_yearly_metric_summary_cor), "prev_")]
-#besides dropbacks, no other metric has better year to year stability than epa
-#n_dropbacks almost predicts next seasons epa as well as last seasons epa. 
+  cat(b, " \r")
+  
+}
 
-### QB 1st half of season to 2nd #####
+
+#pct of time highest correlation with itself
+inter_season_bootstrap_qb_correlation_summary <- inter_season_bootstrap_qb_correlation %>% 
+  filter(comp_var_1 == comp_var_2,
+         !comp_var_1 %in% c("n_dropbacks", "tot_games")#ignore counts of dropbacks and games
+  ) %>% 
+  group_by(boot) %>% 
+  mutate(correlation_rank = min_rank(desc(correlation))
+  ) %>% 
+  ungroup() %>% 
+  rename(stat = comp_var_1) %>% 
+  group_by(stat) %>% 
+  summarize(avg_rank = mean(correlation_rank),
+            pct_no_1 = mean(correlation_rank == 1), 
+            avg_correlation = mean(correlation),
+            sd_correlation = sd(correlation)
+  )
+
+inter_season_bootstrap_qb_correlation_summary %>% 
+  arrange(desc(avg_correlation))
+
+# Within Season Correlation Bootstrap -------------------------------------
+
 
 #look at team averages by game
 qb_game_avg <- nfl_pbp_simple %>% 
@@ -280,41 +322,81 @@ qb_game_avg <- nfl_pbp_simple %>%
   ) %>% 
   ungroup()
 
-qb_game_avg <- qb_game_avg %>% 
-  mutate(season_half = ifelse(week <= 8, 1, 2))
+n_boot <- 1000
+n_half_weeks <- 9
+n_weeks <- 18
 
-qb_half_season_avg <- qb_game_avg %>% 
-  group_by(season,
-           season_half,
-           qb_id,
-           qb) %>% 
-  mutate(tot_games = n(),
-         tot_dropbacks = sum(n_dropbacks)) %>% 
-  summarize_at(vars(epa:kgamma, tot_dropbacks, tot_games), ~weighted.mean(.x, w = n_dropbacks, na.rm = TRUE) )  %>% 
-  ungroup()
+intra_season_bootstrap_qb_correlation <- NULL
+set.seed(5)
+for(b in 1:n_boot){
+  
+  sample_weeks <- sample(n_weeks, n_half_weeks)
+  
+  temp_qb_game_avg <- qb_game_avg %>% 
+    mutate(season_half = ifelse(week %in% sample_weeks, 1, 2))
+  
+  qb_half_season_avg <- temp_qb_game_avg %>% 
+    group_by(season,
+             season_half,
+             qb_id,
+             qb) %>% 
+    mutate(tot_games = n(),
+           tot_dropbacks = sum(n_dropbacks)) %>% 
+    summarize_at(vars(epa:kgamma, tot_dropbacks, tot_games), ~weighted.mean(.x, w = n_dropbacks, na.rm = TRUE) )  %>% 
+    ungroup()
+  
+  qb_half_season_avg_wide <- qb_half_season_avg %>% 
+    pivot_wider(values_from = epa:tot_games,
+                names_from = "season_half") %>% 
+    filter(tot_dropbacks_1 >= 50, tot_dropbacks_2 >= 50) #must have at least 50 dropbacks in both halves of season
+  
+  qb_half_ssn_cor <- qb_half_season_avg_wide %>% 
+    dplyr::select(ends_with("_1"), ends_with("_2")) %>% 
+    cor()
 
-qb_half_season_avg_wide <- qb_half_season_avg %>% 
-  pivot_wider(values_from = epa:tot_games,
-              names_from = "season_half") %>% 
-  filter(tot_dropbacks_1 >= 50, tot_dropbacks_2 >= 50) #must have at least 50 dropbacks in both halves of season
+  ## look just at 1st half to second half correlations
+  intra_season_bootstrap_qb_correlation <- qb_half_ssn_cor[str_detect(colnames(qb_half_ssn_cor), "_1"),
+                  str_detect(colnames(qb_half_ssn_cor), "_2")
+  ] %>% 
+    as_tibble() %>% 
+    mutate(comp_var_1 = colnames(qb_half_ssn_cor)[str_detect(colnames(qb_half_ssn_cor), "_1")] ) %>% 
+    pivot_longer(cols = ends_with("_2"),
+                 values_to = "correlation", 
+                 names_to = "comp_var_2") %>% 
+    mutate(across(starts_with("comp_var"), ~str_remove(.x, "_1|_2")),
+           boot = b) %>% 
+    bind_rows(intra_season_bootstrap_qb_correlation)
+  
+    cat(b, " \r")
+}
 
-qb_half_ssn_cor <- qb_half_season_avg_wide %>% 
-  dplyr::select(ends_with("_1"), ends_with("_2")) %>% 
-  cor()
-
-## look just at 1st half to second half correlations
-qb_half_ssn_cor[str_detect(colnames(qb_half_ssn_cor), "_1"),
-                 str_detect(colnames(qb_half_ssn_cor), "_2")
-]
 ## T-distribution (df =5), LaPlace both stronger correlated with 2nd half EPA/play than 1st half EPA/play!!!!
 
 
-## All 1st half to 2nd half stability of them
-qb_in_season_stability_measures <- qb_half_ssn_cor[str_detect(colnames(qb_half_ssn_cor), "_1"),
-                                                   str_detect(colnames(qb_half_ssn_cor), "_2")] %>% 
-  diag()
-names(qb_in_season_stability_measures) <- colnames(qb_half_ssn_cor)[str_detect(colnames(qb_half_ssn_cor), "_2")] %>% str_remove_all("_2")
-sort(qb_in_season_stability_measures, decreasing = TRUE)
+#pct of time highest correlation with itself
+intra_season_bootstrap_qb_correlation_summary <- intra_season_bootstrap_qb_correlation %>% 
+  filter(comp_var_1 == comp_var_2,
+         !comp_var_1 %in% c("tot_dropbacks", "tot_games")#ignore counts of dropbacks and games
+         ) %>% 
+  group_by(boot) %>% 
+  mutate(correlation_rank = min_rank(desc(correlation))
+         ) %>% 
+  ungroup() %>% 
+  rename(stat = comp_var_1) %>% 
+  group_by(stat) %>% 
+  summarize(avg_rank = mean(correlation_rank),
+            pct_no_1 = mean(correlation_rank == 1), 
+            avg_correlation = mean(correlation),
+            sd_correlation = sd(correlation)
+  )
+
+intra_season_bootstrap_qb_correlation_summary %>% 
+  arrange(desc(avg_correlation))
+
+#on average EPA is 6th in intra-season correlation
+
+#pct of time highest correlation with epa/play
+
 
 
 
@@ -352,81 +434,131 @@ nfl_game_avg <- nfl_pbp_simple %>%
             ) %>% 
   ungroup()
 
-### Team 1st half season to 2nd ######
+### Team Half-season bootstrap ######
 
-## look at first half to second half relationship of each metric
-nfl_game_avg <- nfl_game_avg %>% 
-  mutate(season_half = ifelse(week <= 8, 1, 2),
-         play_type = ifelse(pass_attempt == 1, "pass", "rush"))
+n_boot <- 1000
+n_half_weeks <- 9
+n_weeks <- 18
 
-off_team_half_ssn_avg <- nfl_game_avg %>% 
-  group_by(season,
-           season_half,
-           team = posteam,
-           play_type) %>% 
-  summarize(across(n_plays:kgamma, ~weighted.mean(.x, w = n_plays, na.rm = TRUE) ) ) %>% 
-  mutate(off_def = "off") %>% 
-  ungroup()
+intra_season_bootstrap_team_def_correlation <- intra_season_bootstrap_team_off_correlation <- NULL
+set.seed(5)
+for(b in 1:n_boot){
+  
+  sample_weeks <- sample(n_weeks, n_half_weeks)
+  
+  temp_nfl_game_avg <- nfl_game_avg %>% 
+    mutate(season_half = ifelse(week %in% sample_weeks, 1, 2),
+           play_type = ifelse(pass_attempt == 1, "pass", "rush")
+    )
+  
+  ## look at first half to second half relationship of each metric
+  
+  
+  off_team_half_ssn_avg <- temp_nfl_game_avg %>% 
+    group_by(season,
+             season_half,
+             team = posteam,
+             play_type) %>% 
+    summarize(across(n_plays:kgamma, ~weighted.mean(.x, w = n_plays, na.rm = TRUE) ), .groups = "keep" ) %>% 
+    mutate(off_def = "off") %>% 
+    ungroup()
+  
+  def_team_half_ssn_avg <- temp_nfl_game_avg %>% 
+    group_by(season,
+             season_half,
+             team = defteam,
+             play_type) %>% 
+    summarize(across(n_plays:kgamma, ~weighted.mean(.x, w = n_plays, na.rm = TRUE) ), .groups = "keep" ) %>% 
+    mutate(off_def = "def") %>% 
+    ungroup()
+  
+  nfl_team_half_ssn_avg <- bind_rows(off_team_half_ssn_avg, def_team_half_ssn_avg) %>% 
+    pivot_wider(values_from = n_plays:kgamma,
+                names_from = "season_half")
+  
+  nfl_off_half_ssn_cor <- nfl_team_half_ssn_avg %>% 
+    filter(off_def == "off") %>% 
+    dplyr::select(n_plays_1:last_col()) %>% 
+    cor()
+  
+  nfl_def_half_ssn_cor <- nfl_team_half_ssn_avg %>% 
+    filter(off_def == "def") %>% 
+    dplyr::select(n_plays_1:last_col()) %>% 
+    cor()
+  
+  ## 1st half to second half team per play correlation
+  #offense
+  intra_season_bootstrap_team_off_correlation <- nfl_off_half_ssn_cor[str_detect(colnames(nfl_off_half_ssn_cor), "_1"),
+                                                                      str_detect(colnames(nfl_off_half_ssn_cor), "_2")] %>% 
+    as_tibble() %>% 
+    mutate(comp_var_1 = colnames(nfl_off_half_ssn_cor)[str_detect(colnames(nfl_off_half_ssn_cor), "_1")] ) %>% 
+    pivot_longer(cols = ends_with("_2"),
+                 values_to = "correlation", 
+                 names_to = "comp_var_2") %>% 
+    mutate(across(starts_with("comp_var"), ~str_remove(.x, "_1|_2")),
+           boot = b) %>% 
+    bind_rows(intra_season_bootstrap_team_off_correlation)
 
-def_team_half_ssn_avg <- nfl_game_avg %>% 
-  group_by(season,
-           season_half,
-           team = defteam,
-           play_type) %>% 
-  summarize(across(n_plays:kgamma, ~weighted.mean(.x, w = n_plays, na.rm = TRUE) ) ) %>% 
-  mutate(off_def = "def") %>% 
-  ungroup()
+  #defense
+  intra_season_bootstrap_team_def_correlation <- nfl_def_half_ssn_cor[str_detect(colnames(nfl_def_half_ssn_cor), "_1"),
+                                                                      str_detect(colnames(nfl_def_half_ssn_cor), "_2")] %>% 
+    as_tibble() %>% 
+    mutate(comp_var_1 = colnames(nfl_def_half_ssn_cor)[str_detect(colnames(nfl_def_half_ssn_cor), "_1")] ) %>% 
+    pivot_longer(cols = ends_with("_2"),
+                 values_to = "correlation", 
+                 names_to = "comp_var_2") %>% 
+    mutate(across(starts_with("comp_var"), ~str_remove(.x, "_1|_2")),
+           boot = b) %>% 
+    bind_rows(intra_season_bootstrap_team_def_correlation)
+  
+  cat(b, " \r")
+}
 
-nfl_team_half_ssn_avg <- bind_rows(off_team_half_ssn_avg, def_team_half_ssn_avg) %>% 
-  pivot_wider(values_from = n_plays:kgamma,
-              names_from = "season_half")
-
-nfl_off_half_ssn_cor <- nfl_team_half_ssn_avg %>% 
-  filter(off_def == "off") %>% 
-  dplyr::select(n_plays_1:last_col()) %>% 
-  cor()
-
-nfl_def_half_ssn_cor <- nfl_team_avg %>% 
-  filter(off_def == "def") %>% 
-  dplyr::select(n_plays_1:last_col()) %>% 
-  cor()
-
-## 1st half to second half team per play correlation
-#offense
-nfl_off_half_ssn_cor[str_detect(colnames(nfl_off_half_ssn_cor), "_1"),
-                str_detect(colnames(nfl_off_half_ssn_cor), "_2")
-]
-#epa 1st half still predicts epa 2nd half the best, but not the most "stable"
-#defense
-nfl_def_half_ssn_cor[str_detect(colnames(nfl_def_half_ssn_cor), "_1"),
-                 str_detect(colnames(nfl_def_half_ssn_cor), "_2")
-                 ]
-#epa 1st half still predicts epa 2nd half the best, but not the most "stable"
-
-
-## All 1st half to 2nd half stability of them
+#pct of time highest correlation with itself
 #Offense
-team_off_half_ssn_stability <- nfl_off_half_ssn_cor[str_detect(colnames(nfl_off_half_ssn_cor), "_1"),
-                                                str_detect(colnames(nfl_off_half_ssn_cor), "_2")] %>% 
-  diag()
-names(team_off_half_ssn_stability) <- colnames(nfl_off_half_ssn_cor)[str_detect(colnames(nfl_off_half_ssn_cor), "_2")] %>% str_remove_all("_2")
-sort(team_off_half_ssn_stability, decreasing = TRUE)
-#epa last place in in-season stability
-
+intra_season_bootstrap_team_off_correlation_summary <- intra_season_bootstrap_team_off_correlation %>% 
+  filter(comp_var_1 == comp_var_2,
+         !comp_var_1 %in% c("n_plays")#ignore counts of dropbacks and games
+  ) %>% 
+  group_by(boot) %>% 
+  mutate(correlation_rank = min_rank(desc(correlation))
+  ) %>% 
+  ungroup() %>% 
+  rename(stat = comp_var_1) %>% 
+  group_by(stat) %>% 
+  summarize(avg_rank = mean(correlation_rank),
+            pct_no_1 = mean(correlation_rank == 1), 
+            avg_correlation = mean(correlation),
+            sd_correlation = sd(correlation)
+  )
 #Defense
-team_def_half_ssn_stability <- nfl_def_half_ssn_cor[str_detect(colnames(nfl_def_half_ssn_cor), "_1"),
-                                                    str_detect(colnames(nfl_def_half_ssn_cor), "_2")] %>% 
-  diag()
-names(team_def_half_ssn_stability) <- colnames(nfl_def_half_ssn_cor)[str_detect(colnames(nfl_def_half_ssn_cor), "_2")] %>% str_remove_all("_2")
-sort(team_def_half_ssn_stability, decreasing = TRUE)
-#EPA in 2nd to last-place in in-season stability
-#besides plays per game
-### IN-SEASON: Normal translation of quantiles, then the avg raw quantile, then t-dist(df = 5), then LaPlace THEN gamma THEN EPA/play have highest in season stability
+intra_season_bootstrap_team_def_correlation_summary <- intra_season_bootstrap_team_def_correlation %>% 
+  filter(comp_var_1 == comp_var_2,
+         !comp_var_1 %in% c("n_plays")#ignore counts of dropbacks and games
+  ) %>% 
+  group_by(boot) %>% 
+  mutate(correlation_rank = min_rank(desc(correlation))
+  ) %>% 
+  ungroup() %>% 
+  rename(stat = comp_var_1) %>% 
+  group_by(stat) %>% 
+  summarize(avg_rank = mean(correlation_rank),
+            pct_no_1 = mean(correlation_rank == 1), 
+            avg_correlation = mean(correlation),
+            sd_correlation = sd(correlation)
+  )
 
+#show rankings
+intra_season_bootstrap_team_off_correlation_summary %>% 
+  arrange(desc(avg_correlation))
+intra_season_bootstrap_team_off_correlation_summary %>% 
+  arrange(desc(avg_correlation))
 
+## EPA worst within season
 
-### TEAM ONE SEASON TO THE NEXT #######
-
+# Team Inter Season -------------------------------------------------------
+nfl_game_avg <- nfl_game_avg %>% 
+  mutate(play_type = ifelse(pass_attempt == 1, "pass", "rush"))
 
 off_team_ssn_avg <- nfl_game_avg %>% 
   group_by(season,
@@ -467,43 +599,117 @@ nfl_team_ssn_avg <- bind_rows(off_team_ssn_avg, def_team_ssn_avg) %>%
   ungroup()
 
 
-nfl_off_ssn_cor <- nfl_team_ssn_avg %>% 
-  filter(off_def == "off") %>% 
-  dplyr::select(n_plays:last_col()) %>% 
-  cor()
 
-nfl_def_ssn_cor <- nfl_team_ssn_avg %>% 
-  filter(off_def == "def") %>% 
-  dplyr::select(n_plays:last_col()) %>% 
-  cor()
+n_boot <- 1000
+n_within_boot <- 300
 
-## one season to next team per play correlation
-#offense
-nfl_off_ssn_cor[str_detect(colnames(nfl_off_ssn_cor), "lag_"),
-                !str_detect(colnames(nfl_off_ssn_cor), "lag_")
-]
-#epa last year still predicts epa this year the best, and the most "stable"
-#defense
-nfl_def_ssn_cor[str_detect(colnames(nfl_def_ssn_cor), "lag_"),
-                !str_detect(colnames(nfl_def_ssn_cor), "lag_")
-]
-#epa last year still predicts epa this year the best, and the most "stable"
+inter_season_bootstrap_team_off_correlation <- inter_season_bootstrap_team_def_correlation <- NULL
+set.seed(5)
+for(b in 1:n_boot){
+    
+    
+    nfl_off_ssn_cor <- nfl_team_ssn_avg %>% 
+      sample_n(n_within_boot, replace = TRUE) %>% 
+      filter(off_def == "off") %>% 
+      dplyr::select(n_plays:last_col()) %>% 
+      cor()
+    
+    nfl_def_ssn_cor <- nfl_team_ssn_avg %>% 
+      sample_n(n_within_boot, replace = TRUE) %>% 
+      filter(off_def == "def") %>% 
+      dplyr::select(n_plays:last_col()) %>% 
+      cor()
+    
+    ## one season to next team per play correlation
+    #offense
+    nfl_off_ssn_cor[str_detect(colnames(nfl_off_ssn_cor), "lag_"),
+                    !str_detect(colnames(nfl_off_ssn_cor), "lag_")]
+    #defense
+    nfl_def_ssn_cor[str_detect(colnames(nfl_def_ssn_cor), "lag_"),
+                    !str_detect(colnames(nfl_def_ssn_cor), "lag_")]
+
+    
+    ## All one season to next stability of metrics
+    #Offense
+    inter_season_bootstrap_team_off_correlation <- nfl_off_ssn_cor[str_detect(colnames(nfl_off_ssn_cor), "lag_"),
+                    !str_detect(colnames(nfl_off_ssn_cor), "lag_")] %>% 
+      as_tibble() %>% 
+      mutate(comp_var_1 = str_remove_all(colnames(nfl_off_ssn_cor), "lag_") %>% unique() ) %>% 
+      pivot_longer(cols = -comp_var_1,
+                   values_to = "correlation", 
+                   names_to = "comp_var_2") %>% 
+      mutate(across(starts_with("comp_var"), ~str_remove(.x, "_1|_2")),
+             boot = b) %>% 
+      bind_rows(inter_season_bootstrap_team_off_correlation)
+    
+    
+    
+    
+    #Defense
+    inter_season_bootstrap_team_def_correlation <- nfl_def_ssn_cor[str_detect(colnames(nfl_def_ssn_cor), "lag_"),
+                                                                   !str_detect(colnames(nfl_def_ssn_cor), "lag_")] %>% 
+      as_tibble() %>% 
+      mutate(comp_var_1 = str_remove_all(colnames(nfl_def_ssn_cor), "lag_") %>% unique() ) %>% 
+      pivot_longer(cols = -comp_var_1,
+                   values_to = "correlation", 
+                   names_to = "comp_var_2") %>% 
+      mutate(across(starts_with("comp_var"), ~str_remove(.x, "_1|_2")),
+             boot = b) %>% 
+      bind_rows(inter_season_bootstrap_team_def_correlation)
+  
+
+    cat(b, '\r')
+    
+}
 
 
-## All one season to next stability of metrics
+#pct of time highest correlation with itself
 #Offense
-off_ssn_stability <- nfl_off_ssn_cor[str_detect(colnames(nfl_off_ssn_cor), "lag_"),
-                                               !str_detect(colnames(nfl_off_ssn_cor), "lag_")] %>% 
-  diag()
-names(off_ssn_stability) <- colnames(nfl_off_ssn_cor)[str_detect(colnames(nfl_off_ssn_cor), "lag_")] %>% str_remove_all("lag_")
-sort(off_ssn_stability, decreasing = TRUE)
-#epa best season-to-season stability
-
+inter_season_bootstrap_team_off_correlation_summary <- inter_season_bootstrap_team_off_correlation %>% 
+  filter(comp_var_1 == comp_var_2,
+         !comp_var_1 %in% c("n_plays")#ignore counts of dropbacks and games
+  ) %>% 
+  group_by(boot) %>% 
+  mutate(correlation_rank = min_rank(desc(correlation))
+  ) %>% 
+  ungroup() %>% 
+  rename(stat = comp_var_1) %>% 
+  group_by(stat) %>% 
+  summarize(avg_rank = mean(correlation_rank),
+            pct_no_1 = mean(correlation_rank == 1), 
+            avg_correlation = mean(correlation),
+            sd_correlation = sd(correlation)
+  )
 #Defense
-def_ssn_stability <- nfl_def_ssn_cor[str_detect(colnames(nfl_def_ssn_cor), "lag_"),
-                                               !str_detect(colnames(nfl_def_ssn_cor), "lag_")] %>% 
-  diag()
-names(def_ssn_stability) <- colnames(nfl_def_ssn_cor)[str_detect(colnames(nfl_def_ssn_cor), "lag_")] %>% str_remove_all("lag_")
-sort(def_ssn_stability, decreasing = TRUE)
-#epa best season-to-season stability
-# defense worse than offense
+inter_season_bootstrap_team_def_correlation_summary <- inter_season_bootstrap_team_def_correlation %>% 
+  filter(comp_var_1 == comp_var_2,
+         !comp_var_1 %in% c("n_plays")#ignore counts of dropbacks and games
+  ) %>% 
+  group_by(boot) %>% 
+  mutate(correlation_rank = min_rank(desc(correlation))
+  ) %>% 
+  ungroup() %>% 
+  rename(stat = comp_var_1) %>% 
+  group_by(stat) %>% 
+  summarize(avg_rank = mean(correlation_rank),
+            pct_no_1 = mean(correlation_rank == 1), 
+            avg_correlation = mean(correlation),
+            sd_correlation = sd(correlation)
+  )
+
+#Results
+inter_season_bootstrap_team_off_correlation_summary %>% 
+  arrange(desc(avg_correlation))
+inter_season_bootstrap_team_def_correlation_summary %>% 
+  arrange(desc(avg_correlation))
+
+
+### Save off this information
+save.image("compare_epa_alternatives.RData")
+
+
+
+### Future Ideas:
+## Deal with the nonlinear jump from ~10 yards to touchdown yards
+# what is the percentile performance?
+# what percent of epa available did you get (or pct of negative did you get?)
