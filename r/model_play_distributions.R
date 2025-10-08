@@ -29,7 +29,7 @@ nfl_schedule <- nflreadr::load_schedules()
 max_season <- max(nfl_schedule$season)
 all_seasons <- (max_season - total_seasons + 1):max_season
 
-nfl_pbp <- load_pbp(all_seasons)
+nfl_pbp <- load_pbp(all_seasons[all_seasons < nflreadr::most_recent_season()])
 # player_yearly_salary <- get_nfl_player_contract_by_season(nfl_contracts)
 
 
@@ -244,6 +244,51 @@ nfl_pbp_model_data <- nfl_pbp_simple %>%
 #5. combine 3-stage model
 #6. run 3-stage model through EP model
 
+# DPMM Truncated Normal ---------------------------------------------------
+library(brms)
+library(truncnorm)
+
+# Define a custom family for truncated normal
+trunc_normal <- custom_family(
+  "trunc_normal", dpars = c("mu", "sigma"),
+  links = c("identity", "log"), lb = 0, ub = 100,
+  type = "real"
+)
+
+# Custom Stan code for the truncated normal family
+stan_funs <- "
+  real trunc_normal_lpdf(real y, real mu, real sigma) {
+    return normal_lpdf(y | mu, sigma) - log_diff_exp(normal_lcdf(100 | mu, sigma), normal_lcdf(0 | mu, sigma));
+  }
+  real trunc_normal_rng(real mu, real sigma) {
+    return trunc_normal_rng(mu, sigma, 0, 100);
+  }
+"
+
+stanvars <- stanvar(scode = stan_funs, block = "functions")
+
+# specify the model
+# Define the model formula
+formula <- bf(
+  next_yardline_100 ~ down + ydstogo + yardline_100 + current_score_diff + half*half_seconds_remaining + qb_dropback + qb_kneel + qb_spike + outdoors_stadium + surface_grass + temp + wind + loc + posteam_timeouts_remaining + defteam_timeouts_remaining,
+  sigma ~ down + ydstogo + yardline_100 + current_score_diff + half*half_seconds_remaining + qb_dropback + qb_kneel + qb_spike + outdoors_stadium + surface_grass + temp + wind + loc + posteam_timeouts_remaining + defteam_timeouts_remaining
+)
+
+# Specify priors
+priors <- c(
+  prior(normal(0, 10), class = "b"),
+  prior(cauchy(0, 2), class = "sigma")
+)
+
+# Fit the model
+fit <- brm(
+  formula, data = pbp_data, family = trunc_normal,
+  prior = priors, stanvars = stanvars,
+  chains = 4, cores = 4, iter = 500
+)
+
+# Summarize the model
+summary(fit)
 
 # Loop By Season (Leave Season Out CV) ------------------------------------
 

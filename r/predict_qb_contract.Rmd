@@ -1,0 +1,190 @@
+---
+title: "Predicting Quarterback 2nd Contract Value"
+author: "Paul Sabin"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    latex_engine: xelatex
+fontsize: 11pt
+geometry: margin=1in
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 7,
+  fig.height = 5
+)
+library(tidyverse)
+library(tidymodels)
+library(vip)
+library(kableExtra)
+theme_set(theme_bw())
+```
+
+## 1. Introduction
+
+This analysis builds a **random forest regression model** to predict a quarterback's **second contract value (APY as a percentage of salary cap)**.  
+College and NFL performance metrics, physical traits, and draft data are used as predictors.
+
+We use **k-fold cross-validation** to estimate performance and produce:
+- Variable importance plots  
+- Cross-validated metrics (RMSE, MAE, Bias)  
+- Visualization of predicted vs actual performance  
+- Review of largest over- and under-predictions  
+
+## 2. Data Loading and Preprocessing
+
+```{r data-prep, echo=FALSE, results='hide'}
+source("convert_team_abbreviation.R")
+source("get_nfl_player_contract_by_season.R")
+source("load_or_cache_data.R")
+```
+
+The entire script is in this file: 
+
+```{r load-data}
+source("predict_qb_contract.R")
+```
+
+To confirm the structure:
+
+```{r data-overview}
+data_to_model %>%
+  glimpse()
+```
+
+## 3. Modeling Approach
+
+We model `apy_cap_pct` using all variables **from conference onward** as predictors. Before modeling the log-transformation is taken then converted back before evaluation.
+
+A **random forest** is used because it handles nonlinearities, interactions, and mixed variable types naturally.
+
+## 4. Model Specification and Training
+
+```{r model-train, eval=FALSE, include=TRUE}
+# Define the recipe
+rf_recipe <- recipe(apy_cap_pct ~ ., data = data_to_model) |>
+  update_role(gsis_id, player, college, birth_date, draft_number, new_role = "ID") |>
+  step_rm(gsis_id, player, college, birth_date) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors()) |>
+  step_normalize(all_numeric_predictors())
+
+# Random forest model spec
+rf_spec <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) |>
+  set_mode("regression") |>
+  set_engine("ranger", importance = "permutation")
+
+# Workflow
+rf_workflow <- workflow() |>
+  add_model(rf_spec) |>
+  add_recipe(rf_recipe)
+
+# Cross-validation folds
+folds <- vfold_cv(data_to_model, v = 5)
+
+# Tune model
+rf_tune <- tune_grid(
+  rf_workflow,
+  resamples = folds,
+  grid = 10,
+  metrics = metric_set(rmse, mae, rsq)
+)
+
+# Select best parameters
+best_params <- select_best(rf_tune, metric = "rmse")
+
+# Finalize workflow
+final_rf_workflow <- finalize_workflow(rf_workflow, best_params)
+
+# === Fit resamples to get out-of-fold predictions ===
+cv_fit <- fit_resamples(
+  final_rf_workflow,
+  resamples = folds,
+  control = control_resamples(save_pred = TRUE)
+)
+
+# --- Collect out-of-fold predictions ---
+cv_preds <- collect_predictions(cv_fit)
+
+# Join with original data (if needed for player names)
+cv_preds <- cv_preds |>
+  left_join(data_to_model |> 
+              dplyr::mutate(rowid = 1:n()) |> 
+              dplyr::select(rowid, player), by = c(".row" = "rowid"))
+
+# === Evaluation Metrics ===
+cv_metrics <- cv_preds |> metrics(truth = apy_cap_pct, estimate = .pred)
+cv_bias <- cv_preds |> summarise(bias = mean(.pred - apy_cap_pct))
+
+```
+
+## 5. Model Evaluation
+
+### 5.1 Cross-Validated Metrics
+
+```{r model-metrics}
+cv_metrics %>%
+  dplyr::select(-.estimator) |> 
+  bind_rows(
+    tibble(.estimate = cv_bias$bias, .metric = "bias")
+    ) %>%
+  kable(digits = 4, caption = "Cross-Validated Performance Metrics") %>%
+  kable_styling(full_width = FALSE)
+```
+
+### 5.2 Predicted vs Actual Plot
+
+```{r plot-pred-vs-actual, fig.cap="Predicted vs Actual apy_cap_pct"}
+cv_preds %>%
+  ggplot(aes(y = apy_cap_pct, x = .pred)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = 'glm', color = 'red', se = FALSE) +
+  geom_abline(slope = 1, intercept = 0, color = "black") +
+  xlim(0, 0.25) + ylim(0, 0.25) +
+  labs(
+    title = "Predicted vs Actual Contract Value",
+    x = "Predicted APY (as % of Cap)",
+    y = "Actual APY (as % of Cap)"
+  ) +
+  theme(aspect.ratio = 1)
+```
+
+### 5.3 Biggest Over/Under Predictions
+
+```{r biggest-errors}
+cv_preds %>%
+  mutate(error = .pred - apy_cap_pct, abs_error = abs(error)) %>%
+  arrange(desc(abs_error)) %>%
+  select(player, apy_cap_pct, .pred, error) %>%
+  head(10) %>%
+  kable(digits = 4, caption = "Largest Model Misses (Over/Under Predictions)") %>%
+  kable_styling(full_width = FALSE)
+```
+
+## 6. Variable Importance
+
+```{r var-importance, fig.cap="Top 20 Most Important Features"}
+final_rf_fit <- fit(final_rf_workflow, data = data_to_model)
+final_rf_fit %>%
+  extract_fit_parsnip() %>%
+  vip(num_features = 20)
+```
+
+## 7. Summary
+
+This report used a random forest to predict quarterback second-contract values as a proportion of the salary cap.
+
+Key takeaways:
+- The model achieves weak predictive accuracy (see RMSE and MAE above).
+- Key predictors often include age (selection bias), passing numbers, and running efficiency.
+- The largest outliers are quarterbacks who ended up being among the best in the NFL because they get paid so much better than anyone else. 
+
+```{r session-info, echo=FALSE}
+# sessionInfo()
+```

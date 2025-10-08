@@ -735,8 +735,6 @@ One measure of the effectiveness of EPA has been how well correlated it is with 
 
 I wanted to see if any of these metrics perform better than EPA for both quarterbacks and for team offenses and defenses. For intra-season comparison, I perform a bootstrap simulation by sampling 8 weeks of the season and then comparing those 8 weeks per play numbers to the per play numbers for the remaining weeks.
 
-
-
 ##### Quarterbacks
 
 ```{r}
@@ -757,7 +755,6 @@ intra_season_bootstrap_team_off_correlation_summary %>%
 
 ```
 
-
 ##### Defenses
 
 ```{r}
@@ -768,12 +765,9 @@ intra_season_bootstrap_team_off_correlation_summary %>%
 
 ```
 
-
 #### Inter-season Stability
 
 For year to year comparison, I perform a bootstrap where I sample 300 unique player *x* season or team *x* play type (run/pass) *x* season in each bootstrap. Then I calculate the Pearson Correlation Coefficent of the previous year's value to this seasons value. I perform 1000 bootstrap samples.
-
-
 
 ##### Quarterbacks
 
@@ -794,7 +788,6 @@ inter_season_bootstrap_team_off_correlation_summary %>%
 
 ```
 
-
 ##### Defenses
 
 ```{r}
@@ -807,17 +800,12 @@ inter_season_bootstrap_team_def_correlation_summary %>%
 
 ## Discussion
 
-For intra-season metrics, the standard normal transformed values tend to correlate with the other half of the season the best while EPA does quite poorly. 
+For intra-season metrics, the standard normal transformed values tend to correlate with the other half of the season the best while EPA does quite poorly.
 
-For season to season it tends to be almost the opposite where EPA has a higher stability than the others. This may be because EPA does best with larger sample sizes but struggles with smaller samples due to the "cliffs" that exist around the first down line. 
+For season to season it tends to be almost the opposite where EPA has a higher stability than the others. This may be because EPA does best with larger sample sizes but struggles with smaller samples due to the "cliffs" that exist around the first down line.
 
-When evaluating teams on the season EPA is still a very good metric, but for players perhaps there is something better. If we want to evaluate the value of a player on a play, should we really discount them several points because they gained 9 yards on 3rd and 10 instead of 10? Yes, 10 yards is worth a lot more, but the player got most of the way there and there is a lot (but maybe not complete) randomness between getting 9 yards and 10. 
+When evaluating teams on the season EPA is still a very good metric, but for players perhaps there is something better. If we want to evaluate the value of a player on a play, should we really discount them several points because they gained 9 yards on 3rd and 10 instead of 10? Yes, 10 yards is worth a lot more, but the player got most of the way there and there is a lot (but maybe not complete) randomness between getting 9 yards and 10.
 
-Another idea is to model directly the distribution of EPA on a play via mixture of normals, or a distributional Random Forest. 
+Another idea is to model directly the distribution of EPA on a play via mixture of normals, or a distributional Random Forest.
 
-The idea ultimately is to be able to compare two plays in two completely different contexts and know which result was more impressive given expectation (accounting for play call such as run or pass) in a predictive sense. Otherwise using any play outcome to evaluate players who participated in that play is going to suffer from some bias of players being used in certain settings, some of which are more likely to have bigger plays than others (or vice-versa) and none of it being due to the ability (or lack thereof) of the player. 
-
-
-
-
-
+The idea ultimately is to be able to compare two plays in two completely different contexts and know which result was more impressive given expectation (accounting for play call such as run or pass) in a predictive sense. Otherwise using any play outcome to evaluate players who participated in that play is going to suffer from some bias of players being used in certain settings, some of which are more likely to have bigger plays than others (or vice-versa) and none of it being due to the ability (or lack thereof) of the player.
